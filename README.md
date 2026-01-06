@@ -706,3 +706,491 @@ src/
 - [ ] Unit test framework
 - [ ] Development environment documentation
 
+---
+
+## Phase 2: Core Modules
+
+### Overview
+Phase 2 implements the Tier 1 modules that form the backbone of the health tracking system. These modules work independently but share data through the unified timeline. The focus is on establishing the data import pipeline and basic visualization capabilities.
+
+### 2.1 Timeline & Events Module
+
+The timeline module is the backbone of the entire system, providing a unified view of all health events regardless of source.
+
+#### Tasks
+
+| Task ID | Task | Description | Dependencies |
+|---------|------|-------------|--------------|
+| 2.1.1 | Create timeline data model | Event types, categories, severity levels | 1.2.5 |
+| 2.1.2 | Implement timeline API | CRUD operations, filtering, search | 2.1.1 |
+| 2.1.3 | Build manual event entry | Add custom health events | 2.1.2 |
+| 2.1.4 | Create timeline UI component | Chronological event list with filtering | 2.1.2 |
+| 2.1.5 | Implement event detail view | Expandable event cards with full details | 2.1.4 |
+| 2.1.6 | Add date range filtering | Day/week/month/year/custom views | 2.1.4 |
+| 2.1.7 | Implement category filtering | Filter by module, event type, severity | 2.1.4 |
+| 2.1.8 | Create timeline search | Full-text search across events | 2.1.2 |
+| 2.1.9 | Build event aggregation | Group related events, show summaries | 2.1.4 |
+| 2.1.10 | Add event linking | Link related events across modules | 2.1.1 |
+
+**Timeline Event Schema:**
+
+```python
+class TimelineEvent(BaseModel):
+    __tablename__ = 'timeline_events'
+
+    id: str = Field(primary_key=True)
+    user_id: str = Field(foreign_key='users.id')
+    event_type: str  # 'lab_result', 'medication_start', 'symptom', etc.
+    event_date: datetime
+    module_name: str  # Source module
+    source_record_id: Optional[str]  # ID in source module
+    title: str
+    description: Optional[str]
+    severity: str = 'info'  # 'info', 'warning', 'critical'
+    category: str  # 'clinical', 'lifestyle', 'medication', etc.
+    tags: List[str] = []
+    metadata: Dict[str, Any] = {}
+    is_manually_entered: bool = False
+    created_at: datetime
+    updated_at: datetime
+```
+
+---
+
+### 2.2 Medical Records Module
+
+Stores and organizes all clinical encounters including visit notes, diagnoses, and procedures.
+
+#### Tasks
+
+| Task ID | Task | Description | Dependencies |
+|---------|------|-------------|--------------|
+| 2.2.1 | Design medical records schema | Encounters, diagnoses, procedures, providers | 1.2.2 |
+| 2.2.2 | Implement ICD-10 code lookup | Diagnosis code validation and descriptions | 2.2.1 |
+| 2.2.3 | Implement CPT code lookup | Procedure code validation | 2.2.1 |
+| 2.2.4 | Create provider registry | Track healthcare providers | 2.2.1 |
+| 2.2.5 | Build PDF parser for clinical docs | Extract structured data from visit notes | 2.2.1 |
+| 2.2.6 | Implement FHIR import | Parse FHIR bundles for clinical data | 2.2.1 |
+| 2.2.7 | Implement CCD/CDA import | Parse Consolidated CDA documents | 2.2.1 |
+| 2.2.8 | Create manual entry forms | Add encounters, diagnoses manually | 2.2.1 |
+| 2.2.9 | Build medical records API | CRUD operations, search, filtering | 2.2.1 |
+| 2.2.10 | Create records list UI | Sortable, filterable encounters list | 2.2.9 |
+| 2.2.11 | Build encounter detail view | Full visit information display | 2.2.10 |
+| 2.2.12 | Create diagnosis history view | Timeline of all diagnoses | 2.2.10 |
+| 2.2.13 | Implement timeline integration | Push encounter events to timeline | 2.1.1, 2.2.9 |
+| 2.2.14 | Add document attachment | Link PDF/images to encounters | 2.2.1 |
+
+**Medical Records Schema:**
+
+```sql
+-- Clinical encounters
+CREATE TABLE clinical_encounters (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    encounter_date DATE NOT NULL,
+    encounter_type TEXT,                -- 'office_visit', 'hospital', 'telehealth', etc.
+    provider_id TEXT REFERENCES providers(id),
+    facility_name TEXT,
+    chief_complaint TEXT,
+    notes TEXT,
+    summary TEXT,                       -- AI-generated or manual summary
+    source_file TEXT,                   -- Original PDF if imported
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Diagnoses (linked to encounters)
+CREATE TABLE diagnoses (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    encounter_id TEXT REFERENCES clinical_encounters(id),
+    icd10_code TEXT,
+    description TEXT NOT NULL,
+    diagnosis_date DATE NOT NULL,
+    status TEXT DEFAULT 'active',       -- 'active', 'resolved', 'chronic'
+    is_primary BOOLEAN DEFAULT FALSE,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Procedures (linked to encounters)
+CREATE TABLE procedures (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    encounter_id TEXT REFERENCES clinical_encounters(id),
+    cpt_code TEXT,
+    description TEXT NOT NULL,
+    procedure_date DATE NOT NULL,
+    provider_id TEXT REFERENCES providers(id),
+    outcome TEXT,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Healthcare providers
+CREATE TABLE providers (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    name TEXT NOT NULL,
+    specialty TEXT,
+    npi TEXT,                           -- National Provider Identifier
+    phone TEXT,
+    address TEXT,
+    notes TEXT,
+    is_primary_care BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+---
+
+### 2.3 Laboratory Results Module
+
+Tracks all laboratory test results with trending and reference range analysis.
+
+#### Tasks
+
+| Task ID | Task | Description | Dependencies |
+|---------|------|-------------|--------------|
+| 2.3.1 | Design lab results schema | Tests, values, units, reference ranges | 1.2.2 |
+| 2.3.2 | Implement LOINC code lookup | Standardized test identification | 2.3.1 |
+| 2.3.3 | Build lab PDF parser | Extract results from lab reports | 2.3.1 |
+| 2.3.4 | Parse Quest Diagnostics format | Lab-specific parsing rules | 2.3.3 |
+| 2.3.5 | Parse LabCorp format | Lab-specific parsing rules | 2.3.3 |
+| 2.3.6 | Implement HL7 parser | Parse HL7 lab messages | 2.3.1 |
+| 2.3.7 | Create manual entry forms | Add lab results manually | 2.3.1 |
+| 2.3.8 | Build lab results API | CRUD, filtering, trend queries | 2.3.1 |
+| 2.3.9 | Create results list UI | Table view with out-of-range highlighting | 2.3.8 |
+| 2.3.10 | Build trend graphs | Line charts for individual tests | 2.3.8 |
+| 2.3.11 | Create panel views | Group related tests (lipid panel, etc.) | 2.3.9 |
+| 2.3.12 | Implement reference range analysis | Flag out-of-range values | 2.3.1 |
+| 2.3.13 | Add trend detection | Rising/falling/stable indicators | 2.3.8 |
+| 2.3.14 | Implement timeline integration | Push lab events to timeline | 2.1.1, 2.3.8 |
+| 2.3.15 | Create lab categories | Metabolic, lipid, thyroid, CBC, etc. | 2.3.1 |
+
+**Laboratory Results Schema:**
+
+```sql
+-- Lab test results
+CREATE TABLE lab_results (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    test_date DATE NOT NULL,
+    test_name TEXT NOT NULL,
+    loinc_code TEXT,                    -- Standardized test ID
+    value REAL,
+    value_text TEXT,                    -- For non-numeric results
+    unit TEXT,
+    reference_range_low REAL,
+    reference_range_high REAL,
+    reference_range_text TEXT,          -- For complex ranges
+    is_abnormal BOOLEAN DEFAULT FALSE,
+    abnormal_flag TEXT,                 -- 'high', 'low', 'critical_high', etc.
+    category TEXT,                      -- 'metabolic', 'lipid', 'thyroid', etc.
+    panel_name TEXT,                    -- 'Basic Metabolic Panel', etc.
+    lab_name TEXT,                      -- 'Quest', 'LabCorp', etc.
+    ordering_provider TEXT,
+    notes TEXT,
+    source_file TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_lab_user_date (user_id, test_date),
+    INDEX idx_lab_test_name (user_id, test_name)
+);
+
+-- Lab test definitions (reference data)
+CREATE TABLE lab_test_definitions (
+    id TEXT PRIMARY KEY,
+    test_name TEXT NOT NULL,
+    loinc_code TEXT,
+    category TEXT,
+    typical_unit TEXT,
+    typical_reference_low REAL,
+    typical_reference_high REAL,
+    description TEXT,
+    clinical_significance TEXT
+);
+```
+
+**Lab Categories and Common Tests:**
+
+| Category | Tests |
+|----------|-------|
+| Metabolic | Glucose, BUN, Creatinine, eGFR, Sodium, Potassium, CO2, Calcium |
+| Lipid | Total Cholesterol, LDL, HDL, Triglycerides, VLDL |
+| Liver | AST, ALT, Alkaline Phosphatase, Bilirubin, Albumin, Total Protein |
+| Thyroid | TSH, Free T4, Free T3, T3 Uptake |
+| CBC | WBC, RBC, Hemoglobin, Hematocrit, Platelets, MCV, MCH, MCHC, RDW |
+| Inflammatory | CRP, ESR, Ferritin |
+| Vitamins | Vitamin D, Vitamin B12, Folate |
+| Hormones | Testosterone, Estradiol, Cortisol, DHEA-S, Insulin |
+| Cardiac | Troponin, BNP, Homocysteine |
+| Diabetes | HbA1c, Fasting Glucose, Fasting Insulin, HOMA-IR |
+
+---
+
+### 2.4 Medications Module
+
+Complete medication history with interaction checking and adherence tracking.
+
+#### Tasks
+
+| Task ID | Task | Description | Dependencies |
+|---------|------|-------------|--------------|
+| 2.4.1 | Design medications schema | Current, past, dosing, indications | 1.2.2 |
+| 2.4.2 | Implement RxNorm lookup | Drug name standardization | 2.4.1 |
+| 2.4.3 | Build drug database integration | OpenFDA or similar for drug info | 2.4.2 |
+| 2.4.4 | Implement drug-drug interaction API | Check for interaction warnings | 2.4.3 |
+| 2.4.5 | Create medication entry forms | Add/edit medications | 2.4.1 |
+| 2.4.6 | Build medications API | CRUD, active/inactive filtering | 2.4.1 |
+| 2.4.7 | Create medications list UI | Current and past medications | 2.4.6 |
+| 2.4.8 | Build medication detail view | Full medication information | 2.4.7 |
+| 2.4.9 | Implement interaction warnings UI | Display interactions on add/view | 2.4.4, 2.4.7 |
+| 2.4.10 | Create medication timeline | Gantt-style medication history | 2.4.6 |
+| 2.4.11 | Add adherence logging | Track doses taken | 2.4.1 |
+| 2.4.12 | Implement reminder system | Medication reminders (optional) | 2.4.11 |
+| 2.4.13 | Create side effect logging | Associate symptoms with meds | 2.4.1 |
+| 2.4.14 | Implement timeline integration | Push med events to timeline | 2.1.1, 2.4.6 |
+| 2.4.15 | Build prescription import | Parse prescription info from PDFs | 2.4.1 |
+
+**Medications Schema:**
+
+```sql
+-- Medications
+CREATE TABLE medications (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    name TEXT NOT NULL,                  -- Generic or brand name
+    generic_name TEXT,
+    brand_name TEXT,
+    rxnorm_code TEXT,
+    dose TEXT,                           -- '10 mg'
+    dose_value REAL,
+    dose_unit TEXT,
+    frequency TEXT,                      -- 'twice daily', 'once daily', etc.
+    route TEXT,                          -- 'oral', 'topical', 'injection', etc.
+    indication TEXT,                     -- Why prescribed
+    prescriber TEXT,
+    pharmacy TEXT,
+    start_date DATE,
+    end_date DATE,
+    is_active BOOLEAN DEFAULT TRUE,
+    is_prn BOOLEAN DEFAULT FALSE,        -- As needed
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Medication adherence logs
+CREATE TABLE medication_logs (
+    id TEXT PRIMARY KEY,
+    medication_id TEXT NOT NULL REFERENCES medications(id),
+    user_id TEXT NOT NULL REFERENCES users(id),
+    taken_at TIMESTAMP NOT NULL,
+    dose_taken TEXT,
+    skipped BOOLEAN DEFAULT FALSE,
+    skip_reason TEXT,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Drug interactions (cached from external API)
+CREATE TABLE drug_interactions (
+    id TEXT PRIMARY KEY,
+    drug1_rxnorm TEXT NOT NULL,
+    drug2_rxnorm TEXT NOT NULL,
+    severity TEXT,                       -- 'minor', 'moderate', 'major', 'contraindicated'
+    description TEXT,
+    clinical_effects TEXT,
+    management TEXT,
+    source TEXT,
+    last_updated TIMESTAMP,
+    UNIQUE(drug1_rxnorm, drug2_rxnorm)
+);
+
+-- Medication side effects
+CREATE TABLE medication_side_effects (
+    id TEXT PRIMARY KEY,
+    medication_id TEXT NOT NULL REFERENCES medications(id),
+    user_id TEXT NOT NULL REFERENCES users(id),
+    symptom TEXT NOT NULL,
+    severity TEXT,                       -- 'mild', 'moderate', 'severe'
+    onset_date DATE,
+    resolution_date DATE,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+---
+
+### 2.5 Data Import System
+
+Universal import pipeline supporting multiple file formats and sources.
+
+#### Tasks
+
+| Task ID | Task | Description | Dependencies |
+|---------|------|-------------|--------------|
+| 2.5.1 | Create import queue system | Background processing of imports | 1.2.2 |
+| 2.5.2 | Build file type detection | Identify PDF, CSV, XML, JSON | 2.5.1 |
+| 2.5.3 | Implement PDF text extraction | Extract text from PDF documents | 2.5.2 |
+| 2.5.4 | Create PDF table extraction | Extract tabular data from PDFs | 2.5.3 |
+| 2.5.5 | Build CSV import parser | Generic CSV handling | 2.5.2 |
+| 2.5.6 | Implement FHIR bundle parser | Full FHIR R4 support | 2.5.2 |
+| 2.5.7 | Create CCD/CDA parser | Parse Consolidated CDA | 2.5.2 |
+| 2.5.8 | Build HL7 v2 parser | Parse HL7 messages | 2.5.2 |
+| 2.5.9 | Implement duplicate detection | Prevent duplicate imports | 2.5.1 |
+| 2.5.10 | Create import validation | Verify data integrity | 2.5.1 |
+| 2.5.11 | Build import review UI | Preview before confirming | 2.5.10 |
+| 2.5.12 | Implement partial import | Handle partial failures gracefully | 2.5.1 |
+| 2.5.13 | Create import history log | Track all imports | 2.5.1 |
+| 2.5.14 | Build import error reporting | Clear error messages with fixes | 2.5.12 |
+| 2.5.15 | Implement unit conversion | Handle different units (metric/imperial) | 2.5.1 |
+
+**Import Pipeline Architecture:**
+
+```python
+class ImportPipeline:
+    """
+    Universal import pipeline for all data types.
+    Supports graceful failure and partial imports.
+    """
+
+    def __init__(self, user_id: str, module_name: str):
+        self.user_id = user_id
+        self.module_name = module_name
+        self.import_id = generate_uuid()
+
+    async def process_file(self, file_path: str) -> ImportResult:
+        """Main entry point for file imports."""
+        try:
+            # 1. Detect file type
+            file_type = self.detect_file_type(file_path)
+
+            # 2. Create import record
+            import_record = self.create_import_record(file_path, file_type)
+
+            # 3. Parse file based on type
+            parser = self.get_parser(file_type)
+            parsed_data = await parser.parse(file_path)
+
+            # 4. Validate parsed data
+            validated_data, validation_errors = self.validate(parsed_data)
+
+            # 5. Check for duplicates
+            unique_data = self.deduplicate(validated_data)
+
+            # 6. Transform to module format
+            transformed = self.transform(unique_data)
+
+            # 7. Save to database
+            saved_count, save_errors = await self.save(transformed)
+
+            # 8. Update import record
+            self.complete_import(import_record, saved_count,
+                               len(validation_errors) + len(save_errors))
+
+            return ImportResult(
+                success=True,
+                import_id=self.import_id,
+                records_imported=saved_count,
+                records_skipped=len(unique_data) - saved_count,
+                errors=validation_errors + save_errors
+            )
+
+        except Exception as e:
+            self.fail_import(import_record, str(e))
+            return ImportResult(success=False, error=str(e))
+
+    def get_parser(self, file_type: str) -> BaseParser:
+        """Return appropriate parser for file type."""
+        parsers = {
+            'pdf': PDFParser,
+            'csv': CSVParser,
+            'fhir_json': FHIRParser,
+            'ccd_xml': CCDParser,
+            'hl7': HL7Parser,
+            'apple_health_xml': AppleHealthParser,
+        }
+        return parsers.get(file_type, GenericParser)()
+```
+
+---
+
+### 2.6 Basic Visualization Components
+
+Reusable chart components for displaying health data.
+
+#### Tasks
+
+| Task ID | Task | Description | Dependencies |
+|---------|------|-------------|--------------|
+| 2.6.1 | Set up charting library | Configure Recharts/Chart.js | 1.1.9 |
+| 2.6.2 | Create line chart component | Time-series data visualization | 2.6.1 |
+| 2.6.3 | Add reference range overlays | Show normal ranges on charts | 2.6.2 |
+| 2.6.4 | Create bar chart component | Categorical comparisons | 2.6.1 |
+| 2.6.5 | Build data table component | Sortable, filterable tables | 1.6.6 |
+| 2.6.6 | Create sparkline component | Mini inline charts | 2.6.1 |
+| 2.6.7 | Implement date range selector | Chart zoom and pan | 2.6.2 |
+| 2.6.8 | Add chart export | Download as PNG/SVG | 2.6.2 |
+| 2.6.9 | Create tooltip component | Hover details on charts | 2.6.2 |
+| 2.6.10 | Build responsive chart wrapper | Charts adapt to container size | 2.6.2 |
+
+**Chart Component Interface:**
+
+```typescript
+interface HealthChartProps {
+  data: DataPoint[];
+  xKey: string;           // Key for x-axis values
+  yKey: string;           // Key for y-axis values
+  referenceRange?: {
+    low: number;
+    high: number;
+  };
+  title?: string;
+  unit?: string;
+  dateRange?: DateRange;
+  showTrend?: boolean;
+  height?: number;
+  onPointClick?: (point: DataPoint) => void;
+}
+
+interface DataPoint {
+  date: Date;
+  value: number;
+  label?: string;
+  isAbnormal?: boolean;
+  metadata?: Record<string, any>;
+}
+```
+
+---
+
+### Phase 2 Success Criteria
+
+| Criterion | Verification Method |
+|-----------|---------------------|
+| Can import lab PDF and view results | Import sample lab report, verify data |
+| Lab trends display correctly | View 6+ months of same test on chart |
+| Can add and view medical encounters | Create encounter, verify timeline |
+| Medications show with interactions | Add 2+ meds, check interaction warnings |
+| Timeline shows events from all modules | Filter timeline by module |
+| Manual entry works for all modules | Add entries without importing |
+| Import errors are clearly displayed | Import malformed file, check error message |
+| Out-of-range labs are highlighted | Import abnormal value, verify flag |
+
+### Phase 2 Deliverables Checklist
+
+- [ ] Timeline module fully functional
+- [ ] Medical records import and display
+- [ ] Laboratory results with trends
+- [ ] Medications with interaction checking
+- [ ] PDF parsing for labs and medical docs
+- [ ] FHIR/CCD import capability
+- [ ] Manual entry forms for all modules
+- [ ] Line charts with reference ranges
+- [ ] Data tables with sorting/filtering
+- [ ] Import queue with progress tracking
+- [ ] Duplicate detection
+- [ ] Timeline integration for all modules
+
