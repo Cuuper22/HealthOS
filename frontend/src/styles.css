@@ -1,0 +1,148 @@
+:root {
+  font-family: 'Inter', system-ui, sans-serif;
+  color: #111827;
+  background: #f3f4f6;
+}
+
+body {
+  margin: 0;
+}
+
+.shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.shell__header {
+  background: #0f172a;
+  color: #f8fafc;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+}
+
+.shell__nav a {
+  color: #f8fafc;
+  margin-left: 1rem;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.shell__content {
+  flex: 1;
+  padding: 2rem;
+  display: flex;
+  justify-content: center;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 2rem;
+  width: min(720px, 100%);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+}
+
+.card__section {
+  margin-top: 2rem;
+}
+
+.form {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.form--inline {
+  grid-template-columns: 1fr auto;
+  align-items: end;
+}
+
+label {
+  display: grid;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+input,
+textarea,
+select {
+  padding: 0.6rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid #cbd5f5;
+  font: inherit;
+}
+
+button {
+  background: #2563eb;
+  color: #fff;
+  padding: 0.7rem 1.4rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.module-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  margin-top: 1rem;
+}
+
+.module-card {
+  padding: 1rem;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.tag {
+  display: inline-flex;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: #e2e8f0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-top: 0.5rem;
+}
+
+.tag--active {
+  background: #bbf7d0;
+  color: #166534;
+}
+
+.timeline {
+  list-style: none;
+  padding: 0;
+  margin: 1.5rem 0 0;
+  display: grid;
+  gap: 1rem;
+}
+
+.timeline__item {
+  border-left: 3px solid #2563eb;
+  padding-left: 1rem;
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 1rem 1rem 1rem 1.5rem;
+}
+
+.timeline__meta {
+  display: inline-block;
+  margin-left: 0.75rem;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.status {
+  margin-top: 1rem;
+  font-weight: 600;
+}
+
+.error {
+  color: #b91c1c;
+  font-weight: 600;
+}
