@@ -8,6 +8,10 @@ const Shell = ({ children }: PropsWithChildren) => {
         <div className="shell__brand">HealthOS</div>
         <nav className="shell__nav">
           <Link to="/">Dashboard</Link>
+          <Link to="/timeline">Timeline</Link>
+          <Link to="/medical-records">Medical Records</Link>
+          <Link to="/labs">Labs</Link>
+          <Link to="/medications">Medications</Link>
           <Link to="/login">Login</Link>
           <Link to="/register">Register</Link>
         </nav>

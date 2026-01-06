@@ -9,8 +9,10 @@ from app.modules.base import BaseModule
 
 
 class ModuleRegistry:
+    _modules: dict[str, BaseModule] = {}
+
     def __init__(self) -> None:
-        self._modules: dict[str, BaseModule] = {}
+        self._modules = ModuleRegistry._modules
 
     def register(self, module: BaseModule) -> None:
         self._modules[module.name] = module
