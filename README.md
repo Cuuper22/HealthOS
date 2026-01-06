@@ -2112,3 +2112,699 @@ Phase 5 focuses on production readiness, packaging, documentation, and deploymen
 - [ ] Integration tests
 - [ ] Accessibility compliance
 
+---
+
+## Technical Specifications
+
+### Backend Technology Stack
+
+| Component | Technology | Version | Purpose |
+|-----------|------------|---------|---------|
+| Language | Python | 3.11+ | Core backend language |
+| Web Framework | FastAPI | 0.100+ | REST API server |
+| ORM | SQLAlchemy | 2.0+ | Database abstraction |
+| Database | SQLite + SQLCipher | 3.x | Encrypted local database |
+| Migrations | Alembic | 1.12+ | Database versioning |
+| Validation | Pydantic | 2.0+ | Request/response validation |
+| Data Analysis | Pandas | 2.0+ | Data manipulation |
+| Statistics | SciPy, Statsmodels | Latest | Statistical analysis |
+| ML | Scikit-learn | 1.3+ | Machine learning |
+| PDF Generation | ReportLab | 4.0+ | PDF report creation |
+| Genomics | PyVCF3 | 1.0+ | VCF file parsing |
+| HL7 | python-hl7 | 0.4+ | HL7 message parsing |
+| XML | lxml | 4.9+ | XML/CDA parsing |
+| Testing | pytest | 7.0+ | Unit and integration tests |
+| Async | uvicorn | 0.23+ | ASGI server |
+
+### Frontend Technology Stack
+
+| Component | Technology | Version | Purpose |
+|-----------|------------|---------|---------|
+| Language | TypeScript | 5.0+ | Type-safe JavaScript |
+| Framework | React | 18+ | UI framework |
+| Build Tool | Vite | 5.0+ | Fast build tooling |
+| UI Library | Material-UI | 5.14+ | Component library |
+| Charts | Recharts | 2.8+ | Data visualization |
+| State | React Context + TanStack Query | Latest | State management |
+| Routing | React Router | 6+ | Client-side routing |
+| Forms | React Hook Form | 7+ | Form handling |
+| HTTP Client | Axios | 1.5+ | API communication |
+| Testing | Jest + RTL | Latest | Unit tests |
+| E2E Testing | Playwright | 1.40+ | End-to-end tests |
+
+### Desktop Packaging
+
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| Desktop Shell | Electron | 28+ | Cross-platform desktop |
+| Python Bundling | PyInstaller | 6.0+ | Python executable |
+| Windows Installer | NSIS | 3.09+ | Windows installer |
+| macOS Packaging | electron-builder | Latest | DMG creation |
+| Linux Packaging | electron-builder | Latest | AppImage, deb, rpm |
+| Auto-Update | electron-updater | Latest | Update mechanism |
+
+### API Specifications
+
+#### Authentication Endpoints
+
+```yaml
+/api/auth:
+  /register:
+    POST:
+      body: { email, password, first_name, last_name }
+      response: { user_id, access_token, refresh_token }
+  /login:
+    POST:
+      body: { email, password }
+      response: { access_token, refresh_token, user }
+  /refresh:
+    POST:
+      headers: { Authorization: Bearer <refresh_token> }
+      response: { access_token, refresh_token }
+  /logout:
+    POST:
+      headers: { Authorization: Bearer <access_token> }
+      response: { success: true }
+```
+
+#### Module API Pattern
+
+All modules follow this consistent API pattern:
+
+```yaml
+/api/modules/{module_name}:
+  GET:
+    description: Get module metadata and status
+    response: { name, display_name, has_data, last_update, record_count }
+
+  /data:
+    GET:
+      params: { start_date, end_date, limit, offset, sort, filters }
+      response: { items: [], total, page, per_page }
+    POST:
+      body: { ...module_specific_fields }
+      response: { id, created_at }
+
+  /data/{id}:
+    GET:
+      response: { ...full_record }
+    PUT:
+      body: { ...update_fields }
+      response: { ...updated_record }
+    DELETE:
+      response: { success: true }
+
+  /import:
+    POST:
+      body: { file: binary, file_type: string }
+      response: { import_id, status: 'processing' }
+
+  /import/{import_id}:
+    GET:
+      response: { status, records_imported, records_failed, errors }
+
+  /export:
+    GET:
+      params: { format: 'csv'|'json'|'fhir' }
+      response: binary file
+
+  /insights:
+    GET:
+      response: { insights: [...] }
+
+  /timeline:
+    GET:
+      params: { start_date, end_date }
+      response: { events: [...] }
+```
+
+### Data Format Specifications
+
+#### VCF Import Requirements
+
+```
+Supported versions: VCF 4.0, 4.1, 4.2, 4.3
+Required columns: CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO
+Required INFO fields: None (graceful handling of missing fields)
+Supported genotypes: 0/0, 0/1, 1/1, ./. (missing)
+File size limit: 100GB (streaming parser)
+Compression: .vcf, .vcf.gz supported
+```
+
+#### Apple Health Export
+
+```xml
+Supported: export.xml from iOS Health app
+Record types parsed:
+  - HKQuantityTypeIdentifierHeartRate
+  - HKQuantityTypeIdentifierStepCount
+  - HKQuantityTypeIdentifierActiveEnergyBurned
+  - HKQuantityTypeIdentifierSleepAnalysis
+  - HKQuantityTypeIdentifierOxygenSaturation
+  - HKQuantityTypeIdentifierRespiratoryRate
+  - HKQuantityTypeIdentifierHeartRateVariabilitySDNN
+  - HKWorkoutActivityType*
+```
+
+#### FHIR Support
+
+```
+Version: FHIR R4 (4.0.1)
+Supported resources:
+  - Patient
+  - Observation (labs, vitals)
+  - Condition (diagnoses)
+  - MedicationStatement
+  - Procedure
+  - Immunization
+  - DocumentReference
+  - DiagnosticReport
+Bundle types: transaction, collection, document
+```
+
+### Performance Requirements
+
+| Metric | Target | Measurement |
+|--------|--------|-------------|
+| API Response Time | <200ms (p95) | For typical queries |
+| Large Query Response | <2s | 10,000+ records |
+| VCF Import Speed | >100k variants/min | Whole genome import |
+| Lab PDF Parse Time | <5s | Per PDF document |
+| Report Generation | <30s | Comprehensive PDF |
+| Application Startup | <5s | Cold start |
+| Memory Usage | <500MB | Typical operation |
+| Database Size | Efficient | <1GB for 10 years of data |
+
+---
+
+## Testing Strategy
+
+### Testing Pyramid
+
+```
+                    ╭─────────────────────────╮
+                    │    E2E Tests (10%)      │
+                    │  User flows, critical   │
+                    │      journeys           │
+                 ╭──┴───────────────────────────┴──╮
+                 │   Integration Tests (30%)       │
+                 │  Module interactions, API,      │
+                 │      database operations        │
+              ╭──┴─────────────────────────────────┴──╮
+              │         Unit Tests (60%)              │
+              │  Individual functions, classes,       │
+              │       parsing logic, calculations     │
+              ╰───────────────────────────────────────╯
+```
+
+### Unit Testing
+
+**Backend Unit Tests:**
+
+| Component | Test Focus | Coverage Target |
+|-----------|------------|-----------------|
+| Parsers | File parsing, edge cases, malformed input | 90% |
+| Analysis | Correlation calculations, statistics | 95% |
+| Models | Validation, relationships, constraints | 85% |
+| Services | Business logic, calculations | 90% |
+| Utils | Helper functions, formatters | 95% |
+
+**Sample Test Cases:**
+
+```python
+# test_lab_parser.py
+class TestLabPDFParser:
+    def test_parse_quest_format(self):
+        """Parse standard Quest Diagnostics PDF"""
+        pass
+
+    def test_handle_missing_reference_range(self):
+        """Gracefully handle missing reference ranges"""
+        pass
+
+    def test_unit_conversion(self):
+        """Convert between mg/dL and mmol/L"""
+        pass
+
+    def test_malformed_pdf(self):
+        """Return partial results for corrupted PDF"""
+        pass
+
+# test_correlation.py
+class TestCorrelationEngine:
+    def test_pearson_correlation(self):
+        """Calculate basic Pearson correlation"""
+        pass
+
+    def test_time_lag_detection(self):
+        """Detect optimal time lag between metrics"""
+        pass
+
+    def test_minimum_sample_size(self):
+        """Require minimum samples for significance"""
+        pass
+
+    def test_handles_missing_data(self):
+        """Skip missing values in correlation"""
+        pass
+```
+
+**Frontend Unit Tests:**
+
+| Component | Test Focus | Coverage Target |
+|-----------|------------|-----------------|
+| Components | Rendering, props, user interactions | 80% |
+| Hooks | State management, side effects | 90% |
+| Services | API calls, data transformation | 85% |
+| Utils | Formatters, validators, helpers | 95% |
+
+### Integration Testing
+
+**Backend Integration Tests:**
+
+```python
+# test_integration_labs.py
+class TestLabsIntegration:
+    def test_import_display_export_flow(self):
+        """Import PDF → Store → Query → Export cycle"""
+        # 1. Upload lab PDF
+        # 2. Verify parsed data in database
+        # 3. Query via API
+        # 4. Export and verify format
+        pass
+
+    def test_timeline_integration(self):
+        """Lab results appear in unified timeline"""
+        pass
+
+    def test_cross_module_query(self):
+        """Labs module queries medications for context"""
+        pass
+```
+
+**Database Integration Tests:**
+
+```python
+class TestDatabaseIntegration:
+    def test_encrypted_database_access(self):
+        """Database requires correct encryption key"""
+        pass
+
+    def test_migration_upgrade(self):
+        """Database migrates from v1 to v2 schema"""
+        pass
+
+    def test_concurrent_access(self):
+        """Handle concurrent reads and writes"""
+        pass
+```
+
+### End-to-End Testing
+
+**Critical User Journeys:**
+
+| Journey | Steps | Priority |
+|---------|-------|----------|
+| First-time setup | Install → Create account → Import first data | P0 |
+| Lab import flow | Upload PDF → Review → Confirm → View results | P0 |
+| View trends | Select test → View chart → Change date range | P0 |
+| Generate report | Select options → Preview → Download PDF | P0 |
+| Add medication | Enter details → Check interactions → Save | P1 |
+| Log symptom | Quick add → Set severity → Add notes | P1 |
+| Correlation analysis | Select metrics → View scatter plot → Interpret | P1 |
+
+**E2E Test Example:**
+
+```typescript
+// e2e/lab-import.spec.ts
+test('import lab PDF and view results', async ({ page }) => {
+  // Login
+  await page.goto('/login');
+  await page.fill('[name="email"]', 'test@example.com');
+  await page.fill('[name="password"]', 'password');
+  await page.click('button[type="submit"]');
+
+  // Navigate to labs
+  await page.click('nav >> text=Labs');
+
+  // Upload PDF
+  await page.setInputFiles('input[type="file"]', 'fixtures/sample-lab.pdf');
+
+  // Verify parsing preview
+  await expect(page.locator('.import-preview')).toContainText('Glucose');
+  await expect(page.locator('.import-preview')).toContainText('95 mg/dL');
+
+  // Confirm import
+  await page.click('button >> text=Confirm Import');
+
+  // Verify results appear
+  await expect(page.locator('.lab-results-table')).toContainText('Glucose');
+
+  // Check timeline integration
+  await page.click('nav >> text=Timeline');
+  await expect(page.locator('.timeline')).toContainText('Lab Results');
+});
+```
+
+### Performance Testing
+
+**Load Test Scenarios:**
+
+| Scenario | Data Volume | Expected Performance |
+|----------|-------------|----------------------|
+| Large timeline query | 10 years, all modules | <2s response |
+| VCF import | 5 million variants | <1 hour total |
+| Report generation | All data, comprehensive | <30s |
+| Correlation calculation | 5 years daily data | <5s |
+| Export all data | Complete database | <2 minutes |
+
+### Security Testing
+
+**Security Test Categories:**
+
+| Category | Tests |
+|----------|-------|
+| Authentication | Password requirements, session timeout, token validation |
+| Authorization | Module access, data isolation |
+| Input Validation | SQL injection, XSS, path traversal |
+| Encryption | Database encryption, API transport |
+| Data Leakage | Error messages, logs, exports |
+
+---
+
+## Deployment Strategy
+
+### Deployment Options
+
+#### Option 1: Desktop Application (Recommended)
+
+```
+User Downloads Installer
+         ↓
+   Runs Installer
+         ↓
+  Application Installed
+         ↓
+   First-time Setup
+         ↓
+   Ready to Use
+```
+
+**Installer Contents:**
+- Electron shell application
+- Bundled Python runtime
+- Pre-compiled Python backend
+- React frontend build
+- SQLite with SQLCipher
+- Default configuration
+- Sample data (optional)
+
+**Platform-Specific:**
+
+| Platform | Installer | Size | Notes |
+|----------|-----------|------|-------|
+| Windows | .exe (NSIS) | ~200MB | Requires admin for install |
+| macOS | .dmg | ~180MB | Signed and notarized |
+| Linux | AppImage | ~190MB | No installation needed |
+
+#### Option 2: Self-Hosted Server
+
+```
+User Runs Docker Container
+         ↓
+    Accesses via Browser
+         ↓
+    First-time Setup
+         ↓
+    Ready to Use
+```
+
+**Docker Deployment:**
+
+```yaml
+# docker-compose.yml
+version: '3.8'
+services:
+  healthos:
+    image: healthos/personal-health-os:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - healthos_data:/app/data
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+
+volumes:
+  healthos_data:
+```
+
+### Update Strategy
+
+**Auto-Update Flow:**
+
+```
+Application Starts
+        ↓
+Check for Updates (background)
+        ↓
+Update Available? ─No→ Continue
+        ↓ Yes
+Show Update Notification
+        ↓
+User Confirms ─No→ Remind Later
+        ↓ Yes
+Download Update (background)
+        ↓
+Install on Next Restart
+        ↓
+Migrate Database (if needed)
+        ↓
+Ready to Use
+```
+
+**Update Channels:**
+
+| Channel | Purpose | Update Frequency |
+|---------|---------|------------------|
+| Stable | Production users | Monthly |
+| Beta | Early adopters | Bi-weekly |
+| Development | Testers | As needed |
+
+### Backup Strategy
+
+**Backup Components:**
+
+1. **Database** - SQLite file (encrypted)
+2. **Configuration** - User settings, preferences
+3. **Uploaded Files** - Original PDFs, images
+4. **Encryption Key** - Stored separately, user responsibility
+
+**Backup Methods:**
+
+| Method | Description | Frequency |
+|--------|-------------|-----------|
+| Manual Export | User-initiated full backup | On-demand |
+| Scheduled Backup | Automatic local backup | Daily |
+| Cloud Backup | Optional encrypted cloud sync | Configurable |
+
+---
+
+## Risk Mitigation
+
+### Technical Risks
+
+| Risk | Probability | Impact | Mitigation |
+|------|-------------|--------|------------|
+| PDF parsing failures | High | Medium | Multiple parsing strategies, manual entry fallback |
+| Large VCF file handling | Medium | High | Streaming parser, progress feedback, chunked processing |
+| Database corruption | Low | Critical | Automatic backups, integrity checks, recovery mode |
+| Cross-platform issues | Medium | Medium | Extensive platform testing, CI on all platforms |
+| API rate limits (external) | Medium | Low | Caching, offline mode, user notification |
+
+### Data Risks
+
+| Risk | Probability | Impact | Mitigation |
+|------|-------------|--------|------------|
+| Data loss | Low | Critical | Multiple backup mechanisms, undo support |
+| Privacy breach | Low | Critical | Local-only storage, encryption, no cloud default |
+| Incorrect parsing | Medium | High | Validation, review screens, confidence scores |
+| Duplicate data | Medium | Medium | Duplicate detection, merge tools |
+
+### User Experience Risks
+
+| Risk | Probability | Impact | Mitigation |
+|------|-------------|--------|------------|
+| Overwhelming complexity | High | High | Progressive disclosure, module-by-module onboarding |
+| Import failures | Medium | Medium | Clear error messages, partial import, manual entry |
+| Performance issues | Medium | Medium | Pagination, lazy loading, caching |
+| Genomics misinterpretation | Medium | High | Clear disclaimers, educational content, provider consultation prompts |
+
+### Mitigation Strategies
+
+**PDF Parsing Resilience:**
+
+```python
+class PDFParser:
+    def parse(self, file_path: str) -> ParseResult:
+        # Try multiple parsing strategies
+        strategies = [
+            self._parse_structured,   # Best case: structured PDF
+            self._parse_ocr,          # Fallback: OCR for images
+            self._parse_text_extract, # Fallback: raw text extraction
+        ]
+
+        for strategy in strategies:
+            try:
+                result = strategy(file_path)
+                if result.confidence > 0.7:
+                    return result
+            except Exception:
+                continue
+
+        # Ultimate fallback: return what we could extract
+        return self._partial_result(file_path)
+```
+
+**Graceful Degradation Pattern:**
+
+```python
+def get_health_insights(user_id: str) -> List[Insight]:
+    """
+    Generate insights based on available data.
+    Never fails, just provides fewer insights.
+    """
+    insights = []
+
+    # Always available: basic timeline insights
+    insights.extend(get_timeline_insights(user_id))
+
+    # If labs available
+    if module_has_data('labs', user_id):
+        insights.extend(get_lab_insights(user_id))
+
+    # If genomics AND labs available
+    if module_has_data('genomics', user_id) and module_has_data('labs', user_id):
+        insights.extend(get_pharmacogenomic_insights(user_id))
+
+    # If wearables AND sleep available
+    if module_has_data('wearables', user_id) and module_has_data('sleep', user_id):
+        insights.extend(get_recovery_insights(user_id))
+
+    return insights
+```
+
+---
+
+## Success Milestones
+
+### Phase 1 Milestone: Foundation Complete
+
+**Target**: Working application skeleton with authentication
+
+**Criteria**:
+- [ ] Application launches without errors
+- [ ] User can register and log in
+- [ ] Module registry shows available modules
+- [ ] Database encryption verified
+- [ ] Basic API documentation available
+- [ ] Frontend navigation works
+- [ ] Test framework running
+
+### Phase 2 Milestone: Core Functionality
+
+**Target**: Basic health tracking operational
+
+**Criteria**:
+- [ ] Can import and view lab results
+- [ ] Can add and track medications
+- [ ] Medical records can be stored
+- [ ] Timeline shows events from all modules
+- [ ] Basic charts display data
+- [ ] Export to CSV works
+
+### Phase 3 Milestone: Advanced Features
+
+**Target**: Comprehensive health data management
+
+**Criteria**:
+- [ ] Genomics data imports and displays
+- [ ] Wearable data syncs from Apple Health
+- [ ] Provider reports generate correctly
+- [ ] Basic correlations calculate
+- [ ] Symptoms and mood tracking work
+- [ ] Family history can be entered
+
+### Phase 4 Milestone: Intelligence
+
+**Target**: Actionable health insights
+
+**Criteria**:
+- [ ] Multi-variable correlations work
+- [ ] Risk scores calculate
+- [ ] AI insights generate (if enabled)
+- [ ] Predictions display with confidence
+- [ ] Advanced visualizations available
+
+### Phase 5 Milestone: Production Ready
+
+**Target**: Deployable application
+
+**Criteria**:
+- [ ] Installers for all platforms
+- [ ] Documentation complete
+- [ ] Performance optimized
+- [ ] Security audited
+- [ ] User acceptance testing passed
+
+---
+
+## Estimated Effort by Phase
+
+| Phase | Effort | Description |
+|-------|--------|-------------|
+| Phase 1: Foundation | ~20% | Infrastructure, database, authentication, module system |
+| Phase 2: Core Modules | ~30% | Timeline, medical records, labs, medications, imports |
+| Phase 3: Advanced Features | ~25% | Genomics, wearables, reports, basic correlations |
+| Phase 4: Intelligence | ~15% | Advanced analytics, AI, risk assessment, predictions |
+| Phase 5: Polish | ~10% | Packaging, documentation, testing, optimization |
+
+---
+
+## Appendix A: External API Dependencies
+
+| API | Purpose | Required | Fallback |
+|-----|---------|----------|----------|
+| ClinVar | Variant pathogenicity | No | Local database |
+| gnomAD | Population frequencies | No | Skip frequency data |
+| PharmGKB | Drug-gene interactions | No | Basic interactions only |
+| OpenFDA | Drug information | No | Manual drug entry |
+| RxNorm | Drug normalization | No | Fuzzy name matching |
+| Claude API | AI insights | No | Statistical insights only |
+
+## Appendix B: Data Privacy Checklist
+
+- [ ] All data stored locally by default
+- [ ] Database encrypted at rest
+- [ ] No telemetry without consent
+- [ ] No cloud sync without explicit opt-in
+- [ ] AI features require explicit consent
+- [ ] Export includes all user data
+- [ ] Delete removes all user data
+- [ ] No third-party analytics
+- [ ] Clear privacy documentation
+
+## Appendix C: Regulatory Considerations
+
+This application is designed for **personal health information management** and is **not a medical device**. Important disclaimers:
+
+1. **Not for clinical diagnosis** - All genomic interpretations include appropriate caveats
+2. **Not for treatment decisions** - Provider consultation always recommended
+3. **User-controlled data** - Users maintain complete control over their health data
+4. **No medical advice** - Insights are informational, not prescriptive
+5. **HIPAA awareness** - Designed with HIPAA principles but not a covered entity
+
+---
+
+*This project plan provides a comprehensive roadmap for building Personal Health OS. The modular architecture ensures the system remains functional at every stage of development, with each phase delivering usable functionality while building toward the complete vision.*
+
