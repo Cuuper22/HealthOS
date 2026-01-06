@@ -1194,3 +1194,500 @@ interface DataPoint {
 - [ ] Duplicate detection
 - [ ] Timeline integration for all modules
 
+---
+
+## Phase 3: Advanced Features
+
+### Overview
+Phase 3 implements Tier 2-4 modules including genomics, wearables, and lifestyle tracking. This phase also introduces basic cross-module correlation capabilities and the provider report generation system.
+
+### 3.1 Genomics Module
+
+The most complex module, providing whole genome sequencing analysis and pharmacogenomic insights.
+
+#### Tasks
+
+| Task ID | Task | Description | Dependencies |
+|---------|------|-------------|--------------|
+| 3.1.1 | Design genomics schema | Variants, annotations, risk scores | 1.2.2 |
+| 3.1.2 | Build VCF file parser | Parse standard VCF format | 3.1.1 |
+| 3.1.3 | Parse 23andMe raw data | Convert to standard format | 3.1.2 |
+| 3.1.4 | Parse AncestryDNA raw data | Convert to standard format | 3.1.2 |
+| 3.1.5 | Implement variant storage | Efficient storage for millions of variants | 3.1.1 |
+| 3.1.6 | Build ClinVar integration | Fetch pathogenicity data | 3.1.5 |
+| 3.1.7 | Implement gnomAD lookup | Population frequency data | 3.1.5 |
+| 3.1.8 | Build PharmGKB integration | Pharmacogenomic annotations | 3.1.5 |
+| 3.1.9 | Create variant annotation pipeline | Combine multiple sources | 3.1.6, 3.1.7, 3.1.8 |
+| 3.1.10 | Implement ACMG classification | Pathogenicity assessment | 3.1.9 |
+| 3.1.11 | Build pharmacogenomic profile | Drug metabolism predictions | 3.1.8 |
+| 3.1.12 | Create carrier screening | Recessive condition detection | 3.1.9 |
+| 3.1.13 | Implement disease risk scoring | Polygenic risk calculations | 3.1.9 |
+| 3.1.14 | Build genomics API | Query variants, annotations | 3.1.9 |
+| 3.1.15 | Create genomics dashboard UI | Summary view of findings | 3.1.14 |
+| 3.1.16 | Build variant browser | Search and filter variants | 3.1.14 |
+| 3.1.17 | Create pharmacogenomics view | Drug-gene recommendations | 3.1.11 |
+| 3.1.18 | Implement risk report generation | Comprehensive genomic report | 3.1.13 |
+| 3.1.19 | Add timeline integration | Key genomic findings to timeline | 2.1.1, 3.1.14 |
+| 3.1.20 | Link to medications module | Drug-gene interaction warnings | 2.4.4, 3.1.11 |
+
+**Genomics Schema:**
+
+```sql
+-- Genomic variants (potentially millions of records)
+CREATE TABLE genomic_variants (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    chromosome TEXT NOT NULL,
+    position INTEGER NOT NULL,
+    reference_allele TEXT NOT NULL,
+    alternate_allele TEXT NOT NULL,
+    genotype TEXT,                       -- '0/1', '1/1', etc.
+    rs_id TEXT,                          -- dbSNP ID
+    gene_symbol TEXT,
+    consequence TEXT,                    -- 'missense', 'synonymous', etc.
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_variant_pos (user_id, chromosome, position),
+    INDEX idx_variant_gene (user_id, gene_symbol),
+    INDEX idx_variant_rs (user_id, rs_id)
+);
+
+-- Variant annotations (from external sources)
+CREATE TABLE variant_annotations (
+    id TEXT PRIMARY KEY,
+    variant_id TEXT NOT NULL REFERENCES genomic_variants(id),
+    source TEXT NOT NULL,                -- 'clinvar', 'gnomad', 'pharmgkb'
+    clinvar_significance TEXT,           -- 'pathogenic', 'benign', etc.
+    clinvar_condition TEXT,
+    gnomad_frequency REAL,
+    pharmgkb_level TEXT,                 -- Evidence level
+    pharmgkb_chemicals TEXT,             -- Affected drugs (JSON)
+    raw_data JSON,
+    last_updated TIMESTAMP,
+    UNIQUE(variant_id, source)
+);
+
+-- Pharmacogenomic profile (derived)
+CREATE TABLE pharmacogenomic_profile (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    gene TEXT NOT NULL,                  -- 'CYP2D6', 'CYP2C19', etc.
+    diplotype TEXT,                      -- '*1/*2', etc.
+    phenotype TEXT,                      -- 'Poor Metabolizer', 'Normal', etc.
+    affected_drugs JSON,                 -- List of drugs affected
+    recommendations JSON,                -- Clinical recommendations
+    evidence_level TEXT,
+    source TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, gene)
+);
+
+-- Disease risk scores (polygenic)
+CREATE TABLE disease_risk_scores (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    condition TEXT NOT NULL,
+    risk_score REAL,                     -- Percentile or absolute risk
+    risk_category TEXT,                  -- 'low', 'average', 'elevated', 'high'
+    population_average REAL,
+    variant_count INTEGER,               -- Number of variants in score
+    confidence TEXT,
+    methodology TEXT,
+    source TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, condition)
+);
+```
+
+**Key Pharmacogenomic Genes:**
+
+| Gene | Drug Class | Impact |
+|------|-----------|--------|
+| CYP2D6 | Antidepressants, Opioids, Beta-blockers | Metabolism rate |
+| CYP2C19 | PPIs, Clopidogrel, Antidepressants | Metabolism rate |
+| CYP2C9 | Warfarin, NSAIDs | Metabolism rate |
+| CYP3A4 | Statins, Immunosuppressants | Metabolism rate |
+| VKORC1 | Warfarin | Sensitivity |
+| SLCO1B1 | Statins | Myopathy risk |
+| HLA-B*57:01 | Abacavir | Hypersensitivity |
+| HLA-B*15:02 | Carbamazepine | Stevens-Johnson risk |
+| DPYD | 5-Fluorouracil | Toxicity risk |
+| TPMT | Thiopurines | Toxicity risk |
+
+---
+
+### 3.2 Wearables & Continuous Vitals Module
+
+Imports and analyzes data from wearable devices for continuous health monitoring.
+
+#### Tasks
+
+| Task ID | Task | Description | Dependencies |
+|---------|------|-------------|--------------|
+| 3.2.1 | Design wearables schema | Heart rate, steps, activity, etc. | 1.2.2 |
+| 3.2.2 | Build Apple Health XML parser | Parse iOS health export | 3.2.1 |
+| 3.2.3 | Build Fitbit API integration | Connect to Fitbit account | 3.2.1 |
+| 3.2.4 | Build Garmin Connect integration | Connect to Garmin account | 3.2.1 |
+| 3.2.5 | Build Oura Ring integration | Sleep and readiness data | 3.2.1 |
+| 3.2.6 | Implement data aggregation | Roll up minute data to daily | 3.2.1 |
+| 3.2.7 | Create heart rate analysis | Resting HR, zones, anomalies | 3.2.6 |
+| 3.2.8 | Build HRV analysis | Heart rate variability metrics | 3.2.6 |
+| 3.2.9 | Create activity scoring | Daily activity classification | 3.2.6 |
+| 3.2.10 | Build wearables API | Query metrics by date range | 3.2.6 |
+| 3.2.11 | Create vitals dashboard | Overview of all metrics | 3.2.10 |
+| 3.2.12 | Build metric detail views | Drill-down for each metric | 3.2.11 |
+| 3.2.13 | Create trend analysis | Weekly/monthly trends | 3.2.10 |
+| 3.2.14 | Implement anomaly detection | Flag unusual readings | 3.2.6 |
+| 3.2.15 | Add timeline integration | Significant vitals to timeline | 2.1.1, 3.2.10 |
+
+**Wearables Schema:**
+
+```sql
+-- Raw wearable data (high volume)
+CREATE TABLE wearable_data (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    source TEXT NOT NULL,                -- 'apple_health', 'fitbit', etc.
+    metric_type TEXT NOT NULL,           -- 'heart_rate', 'steps', 'spo2', etc.
+    timestamp TIMESTAMP NOT NULL,
+    value REAL NOT NULL,
+    unit TEXT,
+    metadata JSON,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_wearable_user_type_time (user_id, metric_type, timestamp)
+);
+
+-- Daily aggregated metrics
+CREATE TABLE daily_metrics (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    date DATE NOT NULL,
+    source TEXT,
+    -- Heart rate
+    resting_heart_rate REAL,
+    avg_heart_rate REAL,
+    max_heart_rate REAL,
+    min_heart_rate REAL,
+    -- HRV
+    hrv_average REAL,
+    hrv_rmssd REAL,
+    -- Activity
+    steps INTEGER,
+    active_calories REAL,
+    total_calories REAL,
+    distance_km REAL,
+    floors_climbed INTEGER,
+    active_minutes INTEGER,
+    -- Respiratory
+    respiratory_rate REAL,
+    spo2_average REAL,
+    spo2_min REAL,
+    -- Other
+    body_temperature REAL,
+    blood_pressure_systolic REAL,
+    blood_pressure_diastolic REAL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, date)
+);
+```
+
+---
+
+### 3.3 Sleep Tracking Module
+
+Comprehensive sleep analysis from wearables and manual logging.
+
+#### Tasks
+
+| Task ID | Task | Description | Dependencies |
+|---------|------|-------------|--------------|
+| 3.3.1 | Design sleep schema | Sessions, stages, quality | 1.2.2 |
+| 3.3.2 | Parse Apple Health sleep | Extract sleep data | 3.2.2 |
+| 3.3.3 | Parse Fitbit sleep | Extract sleep stages | 3.2.3 |
+| 3.3.4 | Parse Oura sleep data | Detailed sleep analysis | 3.2.5 |
+| 3.3.5 | Implement manual sleep logging | Manual entry capability | 3.3.1 |
+| 3.3.6 | Calculate sleep quality score | Composite quality metric | 3.3.1 |
+| 3.3.7 | Analyze sleep consistency | Bedtime/wake time patterns | 3.3.1 |
+| 3.3.8 | Build sleep API | Query sleep data | 3.3.1 |
+| 3.3.9 | Create sleep dashboard | Overview and trends | 3.3.8 |
+| 3.3.10 | Build sleep detail view | Single night analysis | 3.3.9 |
+| 3.3.11 | Create sleep stage visualization | Hypnogram display | 3.3.9 |
+| 3.3.12 | Implement circadian analysis | Sleep pattern insights | 3.3.7 |
+| 3.3.13 | Add timeline integration | Sleep events to timeline | 2.1.1, 3.3.8 |
+
+**Sleep Schema:**
+
+```sql
+-- Sleep sessions
+CREATE TABLE sleep_sessions (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    date DATE NOT NULL,                  -- Date of sleep (night of)
+    bedtime TIMESTAMP,
+    wake_time TIMESTAMP,
+    time_in_bed_minutes INTEGER,
+    total_sleep_minutes INTEGER,
+    sleep_efficiency REAL,               -- Percentage
+    source TEXT,
+    -- Sleep stages (minutes)
+    awake_minutes INTEGER,
+    light_sleep_minutes INTEGER,
+    deep_sleep_minutes INTEGER,
+    rem_sleep_minutes INTEGER,
+    -- Quality metrics
+    sleep_score REAL,                    -- 0-100
+    restfulness_score REAL,
+    timing_score REAL,
+    -- Environmental
+    room_temperature REAL,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, date)
+);
+
+-- Sleep stage timeline (for hypnogram)
+CREATE TABLE sleep_stages (
+    id TEXT PRIMARY KEY,
+    sleep_session_id TEXT NOT NULL REFERENCES sleep_sessions(id),
+    stage TEXT NOT NULL,                 -- 'awake', 'light', 'deep', 'rem'
+    start_time TIMESTAMP NOT NULL,
+    end_time TIMESTAMP NOT NULL,
+    duration_minutes INTEGER
+);
+```
+
+---
+
+### 3.4 Physical Activity Module
+
+Exercise tracking and workout analysis.
+
+#### Tasks
+
+| Task ID | Task | Description | Dependencies |
+|---------|------|-------------|--------------|
+| 3.4.1 | Design activity schema | Workouts, metrics, goals | 1.2.2 |
+| 3.4.2 | Parse Apple Health workouts | Import workout data | 3.2.2 |
+| 3.4.3 | Parse Fitbit activities | Import activity data | 3.2.3 |
+| 3.4.4 | Parse Garmin activities | Import detailed workout data | 3.2.4 |
+| 3.4.5 | Parse Strava exports | Import running/cycling data | 3.4.1 |
+| 3.4.6 | Implement manual workout logging | Log workouts manually | 3.4.1 |
+| 3.4.7 | Calculate workout metrics | Intensity, effort, etc. | 3.4.1 |
+| 3.4.8 | Track training load | Weekly volume and intensity | 3.4.7 |
+| 3.4.9 | Build activity API | Query workouts and metrics | 3.4.1 |
+| 3.4.10 | Create activity dashboard | Workout summary and trends | 3.4.9 |
+| 3.4.11 | Build workout detail view | Single workout analysis | 3.4.10 |
+| 3.4.12 | Create activity calendar | Visual workout history | 3.4.10 |
+| 3.4.13 | Implement goal tracking | Set and track activity goals | 3.4.9 |
+| 3.4.14 | Add timeline integration | Workouts to timeline | 2.1.1, 3.4.9 |
+
+---
+
+### 3.5 Symptoms Diary Module
+
+Track subjective health experiences and identify patterns.
+
+#### Tasks
+
+| Task ID | Task | Description | Dependencies |
+|---------|------|-------------|--------------|
+| 3.5.1 | Design symptoms schema | Types, severity, attributes | 1.2.2 |
+| 3.5.2 | Create symptom entry form | Quick logging interface | 3.5.1 |
+| 3.5.3 | Build symptom templates | Common symptom presets | 3.5.2 |
+| 3.5.4 | Implement body map UI | Select symptom location | 3.5.2 |
+| 3.5.5 | Add trigger tracking | Associate triggers with symptoms | 3.5.1 |
+| 3.5.6 | Build symptoms API | CRUD, filtering, patterns | 3.5.1 |
+| 3.5.7 | Create symptoms dashboard | Overview and patterns | 3.5.6 |
+| 3.5.8 | Build symptom detail view | History of specific symptom | 3.5.7 |
+| 3.5.9 | Implement pattern detection | Identify recurring patterns | 3.5.6 |
+| 3.5.10 | Create correlation analysis | Link symptoms to other data | 3.5.9 |
+| 3.5.11 | Add timeline integration | Symptoms to timeline | 2.1.1, 3.5.6 |
+| 3.5.12 | Link to medications | Potential side effects | 2.4.13, 3.5.6 |
+
+**Symptoms Schema:**
+
+```sql
+-- Symptom entries
+CREATE TABLE symptoms (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    symptom_type TEXT NOT NULL,          -- 'headache', 'fatigue', 'nausea', etc.
+    onset_time TIMESTAMP NOT NULL,
+    end_time TIMESTAMP,
+    severity INTEGER,                    -- 1-10 scale
+    location TEXT,                       -- Body location if applicable
+    character TEXT,                      -- 'sharp', 'dull', 'throbbing', etc.
+    triggers JSON,                       -- Suspected triggers
+    relieving_factors JSON,              -- What helped
+    associated_symptoms JSON,            -- Other symptoms at same time
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_symptom_user_type (user_id, symptom_type),
+    INDEX idx_symptom_time (user_id, onset_time)
+);
+
+-- Symptom templates (common patterns)
+CREATE TABLE symptom_templates (
+    id TEXT PRIMARY KEY,
+    user_id TEXT REFERENCES users(id),   -- NULL for system templates
+    name TEXT NOT NULL,
+    symptom_type TEXT NOT NULL,
+    default_attributes JSON,
+    is_system BOOLEAN DEFAULT FALSE
+);
+```
+
+---
+
+### 3.6 Mental Health & Mood Module
+
+Track psychological wellbeing and identify patterns.
+
+#### Tasks
+
+| Task ID | Task | Description | Dependencies |
+|---------|------|-------------|--------------|
+| 3.6.1 | Design mood schema | Ratings, dimensions, notes | 1.2.2 |
+| 3.6.2 | Create daily check-in UI | Quick mood logging | 3.6.1 |
+| 3.6.3 | Implement mood dimensions | Mood, energy, stress, anxiety | 3.6.2 |
+| 3.6.4 | Add journaling feature | Detailed mood notes | 3.6.1 |
+| 3.6.5 | Build mood API | CRUD, trends, patterns | 3.6.1 |
+| 3.6.6 | Create mood dashboard | Overview and trends | 3.6.5 |
+| 3.6.7 | Build mood calendar | Visual mood history | 3.6.6 |
+| 3.6.8 | Implement correlation analysis | Mood vs. sleep, activity, etc. | 3.6.5 |
+| 3.6.9 | Add timeline integration | Significant mood events | 2.1.1, 3.6.5 |
+| 3.6.10 | Create export for therapy | Sharable mood summary | 3.6.5 |
+
+---
+
+### 3.7 Family History Module
+
+Track genetic and familial disease risk context.
+
+#### Tasks
+
+| Task ID | Task | Description | Dependencies |
+|---------|------|-------------|--------------|
+| 3.7.1 | Design family history schema | Family tree, conditions | 1.2.2 |
+| 3.7.2 | Create family tree UI | Visual family tree builder | 3.7.1 |
+| 3.7.3 | Add condition tracking | Medical conditions per family member | 3.7.1 |
+| 3.7.4 | Implement age of onset tracking | When conditions developed | 3.7.3 |
+| 3.7.5 | Build inheritance analysis | Pattern detection | 3.7.3 |
+| 3.7.6 | Build family history API | CRUD, risk analysis | 3.7.1 |
+| 3.7.7 | Create family history view | Summary and tree display | 3.7.6 |
+| 3.7.8 | Implement risk enhancement | Enhance genomic risk with family data | 3.1.13, 3.7.5 |
+| 3.7.9 | Add timeline integration | Family history context | 2.1.1, 3.7.6 |
+
+---
+
+### 3.8 Provider Report Generation
+
+Generate comprehensive reports for healthcare providers.
+
+#### Tasks
+
+| Task ID | Task | Description | Dependencies |
+|---------|------|-------------|--------------|
+| 3.8.1 | Design report templates | Structure and sections | 2.2, 2.3, 2.4 |
+| 3.8.2 | Build PDF report generator | Create formatted PDF reports | 3.8.1 |
+| 3.8.3 | Implement FHIR export | Generate FHIR bundles | 3.8.1 |
+| 3.8.4 | Create CCD export | Generate CCD/CDA documents | 3.8.1 |
+| 3.8.5 | Build report customization UI | Select sections, date range | 3.8.2 |
+| 3.8.6 | Create executive summary section | AI-powered or manual summary | 3.8.2 |
+| 3.8.7 | Add genomics section | Pharmacogenomics for providers | 3.1.17, 3.8.2 |
+| 3.8.8 | Create emergency info card | Wallet card with critical info | 3.8.2 |
+| 3.8.9 | Implement report versioning | Track generated reports | 3.8.2 |
+| 3.8.10 | Build report preview | View before downloading | 3.8.5 |
+
+**Report Structure:**
+
+```
+Provider Report
+├── Cover Page
+│   ├── Patient Name, DOB, Report Date
+│   └── Report Type (Comprehensive, Focused, Emergency)
+├── Executive Summary
+│   ├── Key Findings
+│   ├── Active Conditions
+│   └── Current Medications
+├── Medical History
+│   ├── Diagnoses (with ICD-10)
+│   ├── Procedures (with CPT)
+│   └── Surgical History
+├── Medications
+│   ├── Current Medications
+│   ├── Past Medications
+│   └── Drug-Gene Interactions (if genomics available)
+├── Laboratory Results
+│   ├── Recent Results
+│   ├── Trends (graphs)
+│   └── Out-of-Range Summary
+├── Genomics (if available)
+│   ├── Pharmacogenomic Profile
+│   ├── Relevant Pathogenic Variants
+│   └── Disclaimer
+├── Family History (if available)
+├── Wearable Data Summary (if available)
+│   ├── Resting Heart Rate Trend
+│   ├── Sleep Quality Summary
+│   └── Activity Level Summary
+├── Appendices
+│   ├── Full Lab Results
+│   └── Source Documents
+└── Footer
+    ├── Generated By: Personal Health OS
+    ├── Date Generated
+    └── Disclaimers
+```
+
+---
+
+### 3.9 Basic Correlation System
+
+Implement foundational cross-module correlation capabilities.
+
+#### Tasks
+
+| Task ID | Task | Description | Dependencies |
+|---------|------|-------------|--------------|
+| 3.9.1 | Design correlation data model | Store computed correlations | 1.2.2 |
+| 3.9.2 | Build two-variable correlation | Basic Pearson/Spearman | 3.9.1 |
+| 3.9.3 | Implement time-lag analysis | Check lagged correlations | 3.9.2 |
+| 3.9.4 | Create correlation API | Query correlations | 3.9.1 |
+| 3.9.5 | Build correlation explorer UI | Select and visualize | 3.9.4 |
+| 3.9.6 | Implement scatter plot view | Visualize relationships | 3.9.5 |
+| 3.9.7 | Add statistical significance | P-values and confidence | 3.9.2 |
+| 3.9.8 | Create auto-correlation detection | Find significant patterns | 3.9.7 |
+| 3.9.9 | Build insight notifications | Alert on new correlations | 3.9.8 |
+
+---
+
+### Phase 3 Success Criteria
+
+| Criterion | Verification Method |
+|-----------|---------------------|
+| VCF file imports successfully | Import sample VCF, view variants |
+| Pharmacogenomic profile generated | View drug-gene recommendations |
+| Apple Health data imports | Import export.xml, view metrics |
+| Sleep data displays with stages | View sleep hypnogram |
+| Symptoms can be logged quickly | Add symptom in <30 seconds |
+| Provider PDF report generates | Create report with all sections |
+| FHIR export validates | Validate against FHIR spec |
+| Basic correlations work | Find sleep vs. mood correlation |
+| Drug-gene interactions show | Add medication with genetic impact |
+
+### Phase 3 Deliverables Checklist
+
+- [ ] Genomics module with VCF parsing
+- [ ] Pharmacogenomic profile generation
+- [ ] Apple Health import
+- [ ] Wearables dashboard with vitals
+- [ ] Sleep tracking with stages
+- [ ] Activity/workout logging
+- [ ] Symptoms diary with patterns
+- [ ] Mood/mental health tracking
+- [ ] Family history with tree view
+- [ ] Provider report PDF generation
+- [ ] FHIR and CCD export
+- [ ] Basic correlation analysis
+- [ ] Cross-module data linking
+
