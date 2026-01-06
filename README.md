@@ -1691,3 +1691,424 @@ Implement foundational cross-module correlation capabilities.
 - [ ] Basic correlation analysis
 - [ ] Cross-module data linking
 
+---
+
+## Phase 4: Intelligence & Analytics
+
+### Overview
+Phase 4 focuses on advanced analysis capabilities, AI-powered insights, and sophisticated cross-module intelligence. This phase transforms raw data into actionable health insights.
+
+### 4.1 Advanced Correlation Engine
+
+Build sophisticated multi-variable correlation analysis.
+
+#### Tasks
+
+| Task ID | Task | Description | Dependencies |
+|---------|------|-------------|--------------|
+| 4.1.1 | Implement multi-variate analysis | 3+ variable correlations | 3.9.2 |
+| 4.1.2 | Build confounding variable detection | Identify lurking variables | 4.1.1 |
+| 4.1.3 | Create causal inference framework | Distinguish correlation from causation | 4.1.2 |
+| 4.1.4 | Implement seasonal adjustment | Account for seasonal patterns | 4.1.1 |
+| 4.1.5 | Build dose-response detection | Identify dose-dependent effects | 4.1.1 |
+| 4.1.6 | Create pattern recognition engine | Identify complex patterns | 4.1.1 |
+| 4.1.7 | Implement anomaly correlation | Link anomalies across modules | 4.1.6 |
+| 4.1.8 | Build trigger detection | Identify event triggers | 4.1.6 |
+| 4.1.9 | Create intervention analysis | Before/after comparisons | 4.1.1 |
+| 4.1.10 | Implement rolling correlations | Track correlation changes over time | 4.1.1 |
+
+**Correlation Engine Architecture:**
+
+```python
+class CorrelationEngine:
+    """
+    Advanced correlation analysis engine supporting
+    multi-variate analysis and pattern detection.
+    """
+
+    def analyze_pair(self, user_id: str, metric_a: str,
+                     metric_b: str, time_range: DateRange) -> CorrelationResult:
+        """Basic two-variable correlation with time lag analysis."""
+        pass
+
+    def analyze_multivariate(self, user_id: str, metrics: List[str],
+                            target: str) -> MultivariateResult:
+        """Analyze multiple predictors against a target variable."""
+        pass
+
+    def detect_triggers(self, user_id: str, event_type: str,
+                       lookback_hours: int = 48) -> List[TriggerCandidate]:
+        """Find potential triggers for a specific event type."""
+        pass
+
+    def intervention_analysis(self, user_id: str, intervention_date: date,
+                             metrics: List[str]) -> InterventionResult:
+        """Compare metrics before and after an intervention."""
+        pass
+
+    def find_significant_correlations(self, user_id: str,
+                                      min_r_squared: float = 0.3,
+                                      max_p_value: float = 0.05) -> List[CorrelationResult]:
+        """Automatically find all significant correlations."""
+        pass
+```
+
+---
+
+### 4.2 AI-Powered Insights (Claude API Integration)
+
+Optional integration with Claude API for natural language insights.
+
+#### Tasks
+
+| Task ID | Task | Description | Dependencies |
+|---------|------|-------------|--------------|
+| 4.2.1 | Design AI integration architecture | Privacy-preserving design | 1.5.6 |
+| 4.2.2 | Implement Claude API client | API wrapper with retry logic | 4.2.1 |
+| 4.2.3 | Create data summarization prompts | Generate health summaries | 4.2.2 |
+| 4.2.4 | Build insight generation system | Create actionable insights | 4.2.3 |
+| 4.2.5 | Implement question answering | Answer health data questions | 4.2.2 |
+| 4.2.6 | Create report drafting | AI-assisted report writing | 4.2.2 |
+| 4.2.7 | Build research correlation | Link data to published studies | 4.2.2 |
+| 4.2.8 | Implement privacy controls | User consent and data filtering | 4.2.1 |
+| 4.2.9 | Create local AI option | Ollama integration alternative | 4.2.1 |
+| 4.2.10 | Build insight review UI | View and manage AI insights | 4.2.4 |
+
+**AI Insights System:**
+
+```python
+class AIInsightsEngine:
+    """
+    AI-powered health insights using Claude API.
+    Privacy-first design with user consent controls.
+    """
+
+    def __init__(self, api_key: Optional[str] = None,
+                 use_local: bool = False):
+        self.api_key = api_key
+        self.use_local = use_local
+        self.enabled_modules: Set[str] = set()
+
+    def generate_summary(self, user_id: str,
+                        time_range: DateRange) -> str:
+        """Generate natural language summary of health data."""
+        if not self.is_enabled():
+            return None
+
+        # Collect data from enabled modules only
+        data = self._collect_data(user_id, time_range)
+
+        # Generate summary using Claude
+        prompt = self._build_summary_prompt(data)
+        return self._call_api(prompt)
+
+    def answer_question(self, user_id: str, question: str) -> str:
+        """Answer a question about the user's health data."""
+        pass
+
+    def generate_insights(self, user_id: str) -> List[Insight]:
+        """Generate actionable health insights."""
+        pass
+
+    def draft_report_section(self, user_id: str,
+                            section: str) -> str:
+        """Draft a section of a provider report."""
+        pass
+
+    def find_relevant_research(self, user_id: str,
+                              topic: str) -> List[ResearchLink]:
+        """Find relevant published research for user's data."""
+        pass
+
+    def _collect_data(self, user_id: str,
+                     time_range: DateRange) -> Dict[str, Any]:
+        """Collect data only from user-enabled modules."""
+        pass
+
+    def _anonymize_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Remove personally identifiable information."""
+        pass
+```
+
+**AI Insight Types:**
+
+| Insight Type | Description | Example |
+|-------------|-------------|---------|
+| Trend Alert | Significant trend detected | "Your HbA1c has risen 0.3% over 6 months" |
+| Correlation Discovery | New correlation found | "Sleep under 6hrs correlates with higher next-day glucose" |
+| Intervention Suggestion | Actionable recommendation | "Consider discussing statin alternatives due to CYP3A4 variant" |
+| Anomaly Explanation | Explain unusual reading | "Yesterday's elevated heart rate likely from increased caffeine" |
+| Research Connection | Link to studies | "Your APOE4 status relates to this Alzheimer's prevention study" |
+
+---
+
+### 4.3 Risk Stratification
+
+Comprehensive health risk assessment combining multiple data sources.
+
+#### Tasks
+
+| Task ID | Task | Description | Dependencies |
+|---------|------|-------------|--------------|
+| 4.3.1 | Design risk scoring framework | Modular risk calculation | 3.1.13, 3.7.5 |
+| 4.3.2 | Implement cardiovascular risk | ASCVD, Framingham scores | 4.3.1 |
+| 4.3.3 | Build diabetes risk calculator | Prediabetes risk assessment | 4.3.1 |
+| 4.3.4 | Create genomic risk integration | Combine PRS with clinical data | 3.1.13, 4.3.1 |
+| 4.3.5 | Implement lifestyle risk factors | Add lifestyle modifications | 4.3.1 |
+| 4.3.6 | Build risk visualization | Display risk factors and scores | 4.3.1 |
+| 4.3.7 | Create risk trend tracking | Monitor risk over time | 4.3.1 |
+| 4.3.8 | Implement risk report section | Add to provider reports | 3.8.2, 4.3.1 |
+| 4.3.9 | Build intervention recommendations | Suggest risk reduction | 4.3.1 |
+| 4.3.10 | Create family history integration | Enhance risk with family data | 3.7.5, 4.3.1 |
+
+**Risk Assessment Framework:**
+
+```python
+class RiskAssessmentEngine:
+    """
+    Comprehensive health risk assessment combining
+    multiple data sources with graceful degradation.
+    """
+
+    def calculate_cardiovascular_risk(self, user_id: str) -> RiskScore:
+        """
+        Calculate cardiovascular risk using available data.
+        Adapts calculation based on available inputs.
+        """
+        # Get available data
+        labs = self._get_labs(user_id, ['total_cholesterol', 'hdl', 'ldl'])
+        vitals = self._get_vitals(user_id, ['blood_pressure', 'bmi'])
+        genomics = self._get_genomics(user_id)  # May be None
+        family_history = self._get_family_history(user_id)  # May be None
+
+        # Calculate base risk (traditional factors)
+        base_score = self._calculate_framingham(labs, vitals)
+
+        # Enhance with genomics if available
+        if genomics:
+            prs = genomics.get_prs('cardiovascular')
+            base_score = self._integrate_prs(base_score, prs)
+
+        # Adjust for family history if available
+        if family_history:
+            fh_adjustment = self._family_history_adjustment(family_history)
+            base_score = self._apply_adjustment(base_score, fh_adjustment)
+
+        return RiskScore(
+            score=base_score,
+            percentile=self._score_to_percentile(base_score),
+            category=self._categorize_risk(base_score),
+            data_sources=self._list_data_sources(labs, vitals, genomics, family_history),
+            confidence=self._calculate_confidence()
+        )
+```
+
+---
+
+### 4.4 Predictive Analytics
+
+Predict future health trends based on historical data.
+
+#### Tasks
+
+| Task ID | Task | Description | Dependencies |
+|---------|------|-------------|--------------|
+| 4.4.1 | Build time-series forecasting | Predict metric trends | 4.1.1 |
+| 4.4.2 | Implement lab value prediction | Forecast future lab results | 4.4.1 |
+| 4.4.3 | Create weight trajectory | Project weight changes | 4.4.1 |
+| 4.4.4 | Build symptom prediction | Predict symptom occurrence | 4.4.1, 4.1.8 |
+| 4.4.5 | Implement confidence intervals | Uncertainty quantification | 4.4.1 |
+| 4.4.6 | Create what-if scenarios | Model intervention effects | 4.4.1 |
+| 4.4.7 | Build prediction visualization | Show forecasts on charts | 4.4.1 |
+| 4.4.8 | Implement prediction accuracy tracking | Monitor prediction quality | 4.4.1 |
+
+---
+
+### 4.5 Advanced Visualization
+
+Sophisticated visualization for complex health data.
+
+#### Tasks
+
+| Task ID | Task | Description | Dependencies |
+|---------|------|-------------|--------------|
+| 4.5.1 | Build multi-axis charts | Multiple metrics on one chart | 2.6.2 |
+| 4.5.2 | Create heatmap visualization | Activity, mood calendars | 2.6.1 |
+| 4.5.3 | Implement radar charts | Multi-dimensional health view | 2.6.1 |
+| 4.5.4 | Build network visualization | Show relationships between factors | 2.6.1 |
+| 4.5.5 | Create interactive dashboards | Customizable layouts | 4.5.1 |
+| 4.5.6 | Implement comparison views | Compare time periods | 4.5.1 |
+| 4.5.7 | Build annotation system | Add notes to charts | 4.5.1 |
+| 4.5.8 | Create exportable visualizations | High-quality image export | 4.5.1 |
+
+---
+
+### Phase 4 Success Criteria
+
+| Criterion | Verification Method |
+|-----------|---------------------|
+| Multi-variate correlations work | Find 3+ variable relationship |
+| AI generates meaningful insights | Review AI summary for accuracy |
+| Risk scores calculate correctly | Verify against known calculators |
+| Predictions have confidence intervals | View forecast with uncertainty |
+| Trigger detection finds patterns | Identify known trigger relationship |
+| Visualizations are interactive | Use heatmap, radar charts |
+| Privacy controls work | Verify data filtering for AI |
+
+### Phase 4 Deliverables Checklist
+
+- [ ] Multi-variate correlation analysis
+- [ ] Trigger detection algorithm
+- [ ] Intervention before/after analysis
+- [ ] Claude API integration (optional)
+- [ ] Natural language health summaries
+- [ ] AI-powered insights generation
+- [ ] Cardiovascular risk calculator
+- [ ] Diabetes risk assessment
+- [ ] Genomic risk integration
+- [ ] Time-series forecasting
+- [ ] Heatmap and radar visualizations
+- [ ] Interactive dashboard builder
+- [ ] Privacy-preserving AI design
+
+---
+
+## Phase 5: Polish & Deploy
+
+### Overview
+Phase 5 focuses on production readiness, packaging, documentation, and deployment. The goal is a polished application that non-technical users can install and use independently.
+
+### 5.1 Desktop Application Packaging
+
+#### Tasks
+
+| Task ID | Task | Description | Dependencies |
+|---------|------|-------------|--------------|
+| 5.1.1 | Set up Electron framework | Desktop app shell | All previous phases |
+| 5.1.2 | Package Python backend | Bundle with PyInstaller/cx_Freeze | 5.1.1 |
+| 5.1.3 | Bundle React frontend | Production build integration | 5.1.1 |
+| 5.1.4 | Create Windows installer | NSIS or similar installer | 5.1.2, 5.1.3 |
+| 5.1.5 | Create macOS installer | DMG package | 5.1.2, 5.1.3 |
+| 5.1.6 | Create Linux packages | AppImage, deb, rpm | 5.1.2, 5.1.3 |
+| 5.1.7 | Implement auto-update system | Check and install updates | 5.1.4, 5.1.5, 5.1.6 |
+| 5.1.8 | Create portable version | Run without installation | 5.1.2, 5.1.3 |
+| 5.1.9 | Optimize startup time | Fast application launch | 5.1.2 |
+| 5.1.10 | Implement tray icon | System tray integration | 5.1.1 |
+
+---
+
+### 5.2 Installation & Setup
+
+#### Tasks
+
+| Task ID | Task | Description | Dependencies |
+|---------|------|-------------|--------------|
+| 5.2.1 | Create installation wizard | Guided first-time setup | 5.1.4, 5.1.5, 5.1.6 |
+| 5.2.2 | Build database initialization | First-run database setup | 5.2.1 |
+| 5.2.3 | Create user onboarding flow | Welcome screens and tour | 5.2.1 |
+| 5.2.4 | Implement sample data option | Demo with sample health data | 5.2.3 |
+| 5.2.5 | Build migration system | Upgrade from previous versions | 5.2.2 |
+| 5.2.6 | Create backup/restore wizard | Easy backup management | 5.2.1 |
+| 5.2.7 | Implement import wizard | Guide through first import | 5.2.3 |
+
+---
+
+### 5.3 Performance Optimization
+
+#### Tasks
+
+| Task ID | Task | Description | Dependencies |
+|---------|------|-------------|--------------|
+| 5.3.1 | Profile database queries | Identify slow queries | All modules |
+| 5.3.2 | Implement query caching | Cache frequent queries | 5.3.1 |
+| 5.3.3 | Optimize large dataset handling | Efficient pagination | 5.3.1 |
+| 5.3.4 | Implement lazy loading | Load data on demand | 5.3.3 |
+| 5.3.5 | Optimize frontend bundle | Code splitting, tree shaking | 5.1.3 |
+| 5.3.6 | Implement background processing | Offload heavy computations | 5.3.1 |
+| 5.3.7 | Create performance monitoring | Track response times | 5.3.1 |
+| 5.3.8 | Optimize memory usage | Reduce memory footprint | 5.3.1 |
+
+---
+
+### 5.4 Security Hardening
+
+#### Tasks
+
+| Task ID | Task | Description | Dependencies |
+|---------|------|-------------|--------------|
+| 5.4.1 | Conduct security audit | Review code for vulnerabilities | All modules |
+| 5.4.2 | Implement input sanitization | Prevent injection attacks | 5.4.1 |
+| 5.4.3 | Harden API endpoints | Rate limiting, validation | 5.4.1 |
+| 5.4.4 | Review encryption implementation | Verify encryption strength | 5.4.1 |
+| 5.4.5 | Implement secure update channel | Signed updates | 5.1.7 |
+| 5.4.6 | Create security documentation | Security best practices | 5.4.1 |
+| 5.4.7 | Implement session security | Token rotation, timeout | 5.4.1 |
+
+---
+
+### 5.5 Documentation
+
+#### Tasks
+
+| Task ID | Task | Description | Dependencies |
+|---------|------|-------------|--------------|
+| 5.5.1 | Write getting started guide | Installation and setup | 5.2.1 |
+| 5.5.2 | Create module user guides | How to use each module | All modules |
+| 5.5.3 | Write import guides | How to import from each source | 2.5 |
+| 5.5.4 | Create FAQ documentation | Common questions and answers | All |
+| 5.5.5 | Write troubleshooting guide | Common problems and solutions | All |
+| 5.5.6 | Create video tutorials | Screen recordings of key features | All |
+| 5.5.7 | Write API documentation | For advanced users/developers | 1.4 |
+| 5.5.8 | Create privacy documentation | How data is handled | 1.5 |
+| 5.5.9 | Write genomics interpretation guide | Understanding genetic results | 3.1 |
+
+---
+
+### 5.6 Testing & Quality Assurance
+
+#### Tasks
+
+| Task ID | Task | Description | Dependencies |
+|---------|------|-------------|--------------|
+| 5.6.1 | Complete unit test coverage | >80% code coverage | All modules |
+| 5.6.2 | Run integration tests | Test module interactions | 5.6.1 |
+| 5.6.3 | Perform load testing | Test with large datasets | 5.3.3 |
+| 5.6.4 | Conduct user acceptance testing | Real user testing | 5.2.1 |
+| 5.6.5 | Test on all platforms | Windows, macOS, Linux | 5.1.4, 5.1.5, 5.1.6 |
+| 5.6.6 | Perform accessibility audit | WCAG compliance | All |
+| 5.6.7 | Test offline functionality | Verify local-only operation | All |
+| 5.6.8 | Create automated regression tests | Prevent regressions | 5.6.1 |
+
+---
+
+### Phase 5 Success Criteria
+
+| Criterion | Verification Method |
+|-----------|---------------------|
+| Installer works on all platforms | Test on Windows, macOS, Linux |
+| Non-technical user can complete setup | User testing with novice users |
+| Application launches in <5 seconds | Measure startup time |
+| No critical security vulnerabilities | Security audit report |
+| Documentation covers all features | Review against feature list |
+| 80%+ unit test coverage | Coverage report |
+| Application handles 10+ years of data | Load test with sample data |
+
+### Phase 5 Deliverables Checklist
+
+- [ ] Windows installer (.exe)
+- [ ] macOS installer (.dmg)
+- [ ] Linux packages (AppImage, deb)
+- [ ] Auto-update system
+- [ ] Installation wizard
+- [ ] User onboarding flow
+- [ ] Performance optimizations
+- [ ] Security audit completed
+- [ ] Getting started guide
+- [ ] Module user guides
+- [ ] FAQ and troubleshooting
+- [ ] Video tutorials
+- [ ] API documentation
+- [ ] Unit test suite (>80% coverage)
+- [ ] Integration tests
+- [ ] Accessibility compliance
+
