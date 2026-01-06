@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     secret_key: str = "change-me"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
+    log_level: str = "INFO"
+    encryption_key: str = "change-me"
 
     class Config:
         env_prefix = "HEALTHOS_"
