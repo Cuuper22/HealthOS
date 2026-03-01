@@ -1,7 +1,3 @@
-## Why
-
-My health data lives across scattered patient portals, each with its own login, its own format, and no way to see the full picture. HealthOS is a single platform for medical records, lab results, and medications — everything on one timeline, under my control.
-
 # HealthOS
 
 A production-ready FastAPI + React health platform for tracking medical records, lab results, medications, and unified health timeline.
