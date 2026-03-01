@@ -1,24 +1,25 @@
-import os
-from pathlib import Path
-
-os.environ.setdefault("HEALTHOS_DATABASE_URL", "sqlite:///./test.db")
-
 from fastapi.testclient import TestClient
 
 from app.database import Base, engine
-
-def setup_module() -> None:
-    db_path = Path("./test.db")
-    if db_path.exists():
-        db_path.unlink()
-    # Create tables before app starts
-    Base.metadata.create_all(bind=engine)
-
-
-# Import app after database setup
 from app.main import app
+from app.modules.labs import LabsModule
+from app.modules.medical_records import MedicalRecordsModule
+from app.modules.medications import MedicationsModule
+from app.modules.registry import ModuleRegistry
+from app.modules.system import SystemModule
 
 client = TestClient(app)
+
+
+def setup_module() -> None:
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+    # Register modules (lifespan may not fire for module-level TestClient)
+    registry = ModuleRegistry()
+    registry.register(SystemModule())
+    registry.register(MedicalRecordsModule())
+    registry.register(LabsModule())
+    registry.register(MedicationsModule())
 
 
 def test_auth_and_core_modules_flow() -> None:
@@ -36,7 +37,7 @@ def test_auth_and_core_modules_flow() -> None:
     data = register_response.json()
     user_id = data["user"]["id"]
     token = data["access_token"]
-    
+
     # Setup auth header for subsequent requests
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -50,7 +51,7 @@ def test_auth_and_core_modules_flow() -> None:
     med_response = client.post(
         "/api/medical-records/",
         json={
-            "user_id": user_id,  # This will be overridden by token
+            "user_id": user_id,
             "encounter_date": "2024-01-01",
             "provider": "Primary Care",
             "diagnosis": "Annual checkup",
@@ -64,7 +65,7 @@ def test_auth_and_core_modules_flow() -> None:
     lab_response = client.post(
         "/api/labs/",
         json={
-            "user_id": user_id,  # This will be overridden by token
+            "user_id": user_id,
             "test_name": "Glucose",
             "result_value": 95.0,
             "unit": "mg/dL",
@@ -79,7 +80,7 @@ def test_auth_and_core_modules_flow() -> None:
     medication_response = client.post(
         "/api/medications/",
         json={
-            "user_id": user_id,  # This will be overridden by token
+            "user_id": user_id,
             "name": "Atorvastatin",
             "dosage": "10mg",
             "start_date": "2024-01-03",

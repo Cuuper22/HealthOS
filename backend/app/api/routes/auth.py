@@ -4,12 +4,16 @@ from slowapi.util import get_remote_address
 from sqlalchemy import select
 
 from app.api.schemas import PasswordReset, PasswordResetRequest, TokenResponse, UserCreate, UserLogin, UserResponse
+from app.config import settings
 from app.database import SessionLocal
 from app.models.user import User
 from app.utils.security import create_access_token, hash_password, verify_password
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
-limiter = Limiter(key_func=get_remote_address)
+limiter = Limiter(
+    key_func=get_remote_address,
+    enabled=settings.environment != "testing",
+)
 
 
 @router.post("/register", response_model=TokenResponse)

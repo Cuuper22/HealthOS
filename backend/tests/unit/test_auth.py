@@ -1,11 +1,3 @@
-import os
-from datetime import timedelta
-from pathlib import Path
-
-os.environ.setdefault("HEALTHOS_DATABASE_URL", "sqlite:///./test_auth.db")
-
-import pytest
-from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from jose import jwt
 
@@ -18,10 +10,7 @@ client = TestClient(app)
 
 
 def setup_module() -> None:
-    db_path = Path("./test_auth.db")
-    if db_path.exists():
-        db_path.unlink()
-    # Create all tables
+    Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
 
 

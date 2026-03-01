@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,31 +23,10 @@ from app.utils.exceptions import (
 )
 from app.utils.logging import configure_logging
 
-app = FastAPI(title="HealthOS")
 
-# Exception handlers for consistent error responses
-app.add_exception_handler(APIException, api_exception_handler)
-app.add_exception_handler(HTTPException, http_exception_handler)
-app.add_exception_handler(RequestValidationError, validation_exception_handler)
-
-# Rate limiting
-limiter = Limiter(key_func=get_remote_address)
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-app.add_middleware(SlowAPIMiddleware)
-
-# CORS middleware - allow frontend to call API
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],  # Vite default + common React port
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-@app.on_event("startup")
-def startup() -> None:
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
     configure_logging()
     Base.metadata.create_all(bind=engine)
     registry = ModuleRegistry()
@@ -53,6 +34,35 @@ def startup() -> None:
     registry.register(MedicalRecordsModule())
     registry.register(LabsModule())
     registry.register(MedicationsModule())
+    yield
+    # Shutdown (nothing to clean up)
+
+
+app = FastAPI(title="HealthOS", lifespan=lifespan)
+
+# Exception handlers for consistent error responses
+app.add_exception_handler(APIException, api_exception_handler)
+app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+
+# Rate limiting (disabled in testing)
+from app.config import settings as app_settings
+limiter = Limiter(
+    key_func=get_remote_address,
+    enabled=app_settings.environment != "testing",
+)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
+
+# CORS middleware - allow frontend to call API
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/health")

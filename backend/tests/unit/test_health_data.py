@@ -1,8 +1,3 @@
-import os
-from pathlib import Path
-
-os.environ.setdefault("HEALTHOS_DATABASE_URL", "sqlite:///./test_health.db")
-
 from fastapi.testclient import TestClient
 
 from app.database import Base, engine
@@ -12,9 +7,7 @@ client = TestClient(app)
 
 
 def setup_module() -> None:
-    db_path = Path("./test_health.db")
-    if db_path.exists():
-        db_path.unlink()
+    Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
 
 
