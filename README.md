@@ -1,3 +1,15 @@
+## Why
+
+My health data lives in six different patient portals. Each one has its own login, its own format, its own idea of what "recent" means. None of them talk to each other.
+
+HealthOS puts medical records, lab results, and medications on one timeline. Same place, same format, one login.
+
+The part I actually care about architecturally: each health domain is a plugin. Labs, medications, medical records — they all implement the same `BaseModule` interface, register themselves at startup, and expose standard methods for timeline events, data import/export, and cross-module queries. The medications module can check if lab results exist before surfacing interaction warnings. Adding a new domain means implementing one abstract class, not rewiring the app.
+
+The auth layer does the small things that matter: rate-limited login, a password reset endpoint that always returns "email sent" whether the account exists or not (anti-enumeration), and an audit log that captures before/after values on every write.
+
+Your health data shouldn't require six browser tabs to understand.
+
 # HealthOS
 
 A production-ready FastAPI + React health platform for tracking medical records, lab results, medications, and unified health timeline.
