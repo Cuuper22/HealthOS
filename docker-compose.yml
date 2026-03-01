@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - HEALTHOS_DATABASE_URL=sqlite:///./data/database/healthos.db
+      - HEALTHOS_SECRET_KEY=dev-secret-key-change-in-production
+      - HEALTHOS_ENVIRONMENT=development
+      - HEALTHOS_LOG_LEVEL=INFO
+    volumes:
+      - ./backend:/app
+      - healthos_data:/app/data
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm run dev -- --host 0.0.0.0
+
+volumes:
+  healthos_data:

@@ -11,6 +11,18 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     encryption_key: str = "change-me"
 
+    # Rate limiting
+    rate_limit_auth: int = 5  # requests per minute for auth endpoints
+    rate_limit_api: int = 60  # requests per minute for API endpoints
+
+    # Email configuration (for password reset)
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    from_email: str = "noreply@healthos.example.com"
+    frontend_url: str = "http://localhost:5173"
+
     class Config:
         env_prefix = "HEALTHOS_"
 

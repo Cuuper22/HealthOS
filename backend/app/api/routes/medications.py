@@ -13,10 +13,19 @@ router = APIRouter(prefix="/api/medications", tags=["medications"])
 
 
 @router.get("/", response_model=list[MedicationResponse])
-def list_medications(current_user_id: str = Depends(get_current_user_id)) -> list[MedicationResponse]:
+def list_medications(
+    current_user_id: str = Depends(get_current_user_id), skip: int = 0, limit: int = 100
+) -> list[MedicationResponse]:
+    """Get medications with pagination (skip, limit)."""
+    limit = min(limit, 1000)
     with SessionLocal() as session:
         medications = (
-            session.execute(select(Medication).where(Medication.user_id == current_user_id))
+            session.execute(
+                select(Medication)
+                .where(Medication.user_id == current_user_id)
+                .offset(skip)
+                .limit(limit)
+            )
             .scalars()
             .all()
         )

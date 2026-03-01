@@ -13,10 +13,19 @@ router = APIRouter(prefix="/api/labs", tags=["labs"])
 
 
 @router.get("/", response_model=list[LabResultResponse])
-def list_results(current_user_id: str = Depends(get_current_user_id)) -> list[LabResultResponse]:
+def list_results(
+    current_user_id: str = Depends(get_current_user_id), skip: int = 0, limit: int = 100
+) -> list[LabResultResponse]:
+    """Get lab results with pagination (skip, limit)."""
+    limit = min(limit, 1000)
     with SessionLocal() as session:
         results = (
-            session.execute(select(LabResult).where(LabResult.user_id == current_user_id))
+            session.execute(
+                select(LabResult)
+                .where(LabResult.user_id == current_user_id)
+                .offset(skip)
+                .limit(limit)
+            )
             .scalars()
             .all()
         )

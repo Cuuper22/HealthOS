@@ -21,20 +21,31 @@ export type TimelineEvent = {
   severity?: string | null;
 };
 
+const getAuthHeaders = (): HeadersInit => {
+  const token = localStorage.getItem('healthos_token');
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
+
 const handleResponse = async <T>(response: Response): Promise<T> => {
   if (!response.ok) {
-    throw new Error('Request failed');
+    const errorData = await response.json().catch(() => ({ detail: 'Request failed' }));
+    throw new Error(errorData.detail || 'Request failed');
   }
   return response.json() as Promise<T>;
 };
 
 export const fetchModules = () =>
-  fetch(`${API_BASE}/api/modules/`).then((response) => handleResponse<ModuleStatus[]>(response));
+  fetch(`${API_BASE}/api/modules/`, {
+    headers: getAuthHeaders(),
+  }).then((response) => handleResponse<ModuleStatus[]>(response));
 
-export const fetchTimeline = (userId: string) =>
-  fetch(`${API_BASE}/api/timeline/?user_id=${userId}`).then((response) =>
-    handleResponse<TimelineEvent[]>(response),
-  );
+export const fetchTimeline = () =>
+  fetch(`${API_BASE}/api/timeline/`, {
+    headers: getAuthHeaders(),
+  }).then((response) => handleResponse<TimelineEvent[]>(response));
 
 export const createMedicalRecord = (payload: {
   user_id: string;
@@ -45,7 +56,7 @@ export const createMedicalRecord = (payload: {
 }) =>
   fetch(`${API_BASE}/api/medical-records/`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify(payload),
   }).then((response) => handleResponse(response));
 
@@ -60,7 +71,7 @@ export const createLabResult = (payload: {
 }) =>
   fetch(`${API_BASE}/api/labs/`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify(payload),
   }).then((response) => handleResponse(response));
 
@@ -75,6 +86,6 @@ export const createMedication = (payload: {
 }) =>
   fetch(`${API_BASE}/api/medications/`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify(payload),
   }).then((response) => handleResponse(response));

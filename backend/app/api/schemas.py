@@ -17,6 +17,15 @@ class UserLogin(BaseModel):
     password: str
 
 
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordReset(BaseModel):
+    token: str
+    new_password: str
+
+
 class UserResponse(BaseModel):
     id: str
     email: EmailStr
@@ -64,6 +73,24 @@ class MedicationCreate(BaseModel):
     end_date: date | None = None
     status: str = "active"
     notes: str | None = None
+
+    def model_post_init(self, __context):
+        """Validate dosage field for realistic values."""
+        if self.dosage:
+            # Check for negative numbers in dosage
+            import re
+
+            numbers = re.findall(r"\d+\.?\d*", self.dosage)
+            for num_str in numbers:
+                num = float(num_str)
+                if num < 0:
+                    raise ValueError("Dosage cannot contain negative values")
+                if num > 100000:  # Absurdly high dosage
+                    raise ValueError("Dosage value is unrealistically high")
+
+        # Validate date range
+        if self.start_date and self.end_date and self.end_date < self.start_date:
+            raise ValueError("End date cannot be before start date")
 
 
 class MedicationResponse(MedicationCreate):

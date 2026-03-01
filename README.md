@@ -1,36 +1,97 @@
 # HealthOS
 
-A FastAPI + React health platform for tracking medical records, lab results, medications, and health timeline.
+A production-ready FastAPI + React health platform for tracking medical records, lab results, medications, and unified health timeline.
 
 ## Features
 
-- JWT-based authentication (register/login)
-- Medical records tracking
-- Laboratory results management
-- Medication tracking  
-- Unified health timeline
-- Modular architecture
-- Full test coverage
+- **Authentication**: JWT-based auth with bcrypt password hashing, rate limiting, and password reset
+- **Medical Records**: Track doctor visits, diagnoses, and notes
+- **Lab Results**: Record and view laboratory test results with reference ranges
+- **Medications**: Manage current and past medications with dosage validation
+- **Timeline**: Unified chronological view of all health events
+- **Security**: CORS protection, input validation, auth middleware
+- **Production Ready**: Error boundaries, loading states, pagination, consistent API errors
 
-## Setup
-
-### Backend
+## Quick Start with Docker
 
 ```bash
+docker-compose up
+```
+
+This will start both backend (port 8000) and frontend (port 5173).
+
+## Manual Setup
+
+### Backend Setup
+
+1. Navigate to backend directory:
+```bash
 cd backend
+```
+
+2. Create a virtual environment (recommended):
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+
+3. Install dependencies:
+```bash
 pip install -r requirements.txt
+```
+
+4. Copy `.env.example` to `.env` and configure:
+```bash
+cp .env.example .env
+# Edit .env and change HEALTHOS_SECRET_KEY to a secure random value
+```
+
+5. Run the server:
+```bash
 uvicorn app.main:app --reload
 ```
 
 The API will be available at `http://localhost:8000`
 
-### Frontend
+API docs: `http://localhost:8000/docs`
 
+### Frontend Setup
+
+1. Navigate to frontend directory:
 ```bash
 cd frontend
+```
+
+2. Install dependencies:
+```bash
 npm install
+```
+
+3. Start development server:
+```bash
 npm run dev
 ```
+
+Frontend will be available at `http://localhost:5173`
+
+## Development Workflow
+
+### Create Test Data
+
+Run the seed script to create a test user and sample data:
+
+```bash
+cd backend
+python seed_data.py
+```
+
+Test credentials:
+- Email: `test@healthos.dev`
+- Password: `password123`
+
+### Database Setup
+
+See [DATABASE_SETUP.md](./DATABASE_SETUP.md) for detailed database configuration, migrations, and backup instructions.
 
 ## API Endpoints
 
