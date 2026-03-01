@@ -1,21 +1,22 @@
 from datetime import datetime
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from sqlalchemy import select
 
 from app.api.schemas import MedicalRecordCreate, MedicalRecordResponse
 from app.database import SessionLocal
 from app.models.medical_record import MedicalRecord
 from app.services.timeline import create_timeline_event
+from app.utils.auth import get_current_user_id
 
 router = APIRouter(prefix="/api/medical-records", tags=["medical-records"])
 
 
 @router.get("/", response_model=list[MedicalRecordResponse])
-def list_records(user_id: str) -> list[MedicalRecordResponse]:
+def list_records(current_user_id: str = Depends(get_current_user_id)) -> list[MedicalRecordResponse]:
     with SessionLocal() as session:
         records = (
-            session.execute(select(MedicalRecord).where(MedicalRecord.user_id == user_id))
+            session.execute(select(MedicalRecord).where(MedicalRecord.user_id == current_user_id))
             .scalars()
             .all()
         )
@@ -33,7 +34,11 @@ def list_records(user_id: str) -> list[MedicalRecordResponse]:
 
 
 @router.post("/", response_model=MedicalRecordResponse)
-def create_record(payload: MedicalRecordCreate) -> MedicalRecordResponse:
+def create_record(
+    payload: MedicalRecordCreate, current_user_id: str = Depends(get_current_user_id)
+) -> MedicalRecordResponse:
+    # Override user_id from token
+    payload.user_id = current_user_id
     with SessionLocal() as session:
         record = MedicalRecord(**payload.model_dump())
         session.add(record)

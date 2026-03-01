@@ -17,7 +17,7 @@ class TimelineEvent(TimestampedBase):
     title: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str | None] = mapped_column(String, nullable=True)
     severity: Mapped[str | None] = mapped_column(String, nullable=True)
-    metadata: Mapped[dict] = mapped_column(JSON, default=dict)
+    event_metadata: Mapped[dict] = mapped_column(JSON, default=dict)
 
     __table_args__ = (
         Index("idx_timeline_user_date", "user_id", "event_date"),

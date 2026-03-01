@@ -1,45 +1,28 @@
 # HealthOS
 
-Personal health intelligence platform. Unifies genomic data, medical records, lab results, wearable metrics, and lifestyle data into one locally-hosted system.
+A FastAPI + React health platform for tracking medical records, lab results, medications, and health timeline.
 
-This is a personal project, not a product. Built for one user (me), designed to actually be useful rather than impressive on a landing page.
+## Features
 
-## Status
+- JWT-based authentication (register/login)
+- Medical records tracking
+- Laboratory results management
+- Medication tracking  
+- Unified health timeline
+- Modular architecture
+- Full test coverage
 
-Phase 1 (Foundation) is complete. Backend API is functional, frontend is scaffolded with Vite + React. Actively developing core modules.
-
-There's a 100KB project plan in this repo that covers phases 1-5 in excruciating detail. The README is not that document.
-
-## What It Does
-
-- Ingests and normalizes health data from multiple sources (genomics, labs, wearables, medical records)
-- Stores everything locally in a structured database
-- Exposes a REST API for querying and analysis
-- React frontend for visualization (in progress)
-
-## Stack
-
-**Backend:**
-- Python / FastAPI
-- SQLite (local-first, no cloud dependency)
-- Modular architecture -- each health domain is its own module
-
-**Frontend:**
-- React + TypeScript
-- Vite
-- Talking to the FastAPI backend
-
-## Running It
+## Setup
 
 ### Backend
 
 ```bash
 cd backend
 pip install -r requirements.txt
-python -m app.main
+uvicorn app.main:app --reload
 ```
 
-API runs on `http://localhost:8000`. Docs at `/docs`.
+The API will be available at `http://localhost:8000`
 
 ### Frontend
 
@@ -49,29 +32,83 @@ npm install
 npm run dev
 ```
 
-## Project Structure
+## API Endpoints
+
+### Authentication
+- `POST /api/auth/register` - Register new user
+- `POST /api/auth/login` - Login and get JWT token
+
+### Medical Records (Protected)
+- `GET /api/medical-records/` - List user's medical records
+- `POST /api/medical-records/` - Create medical record
+
+### Lab Results (Protected)
+- `GET /api/labs/` - List user's lab results
+- `POST /api/labs/` - Create lab result
+
+### Medications (Protected)
+- `GET /api/medications/` - List user's medications
+- `POST /api/medications/` - Create medication
+
+### Timeline (Protected)
+- `GET /api/timeline/` - Get unified health timeline
+
+### Modules
+- `GET /api/modules/` - List available modules
+
+### Data Import (Protected)
+- `POST /api/imports/` - Import health data from file
+
+## Authentication
+
+Protected endpoints require a JWT token in the Authorization header:
 
 ```
-HealthOS/
-├── backend/
-│   ├── app/
-│   │   ├── main.py          # FastAPI entry point
-│   │   ├── config.py         # Configuration
-│   │   ├── database.py       # DB setup
-│   │   ├── models/           # Data models
-│   │   ├── modules/          # Health domain modules
-│   │   ├── services/         # Business logic
-│   │   ├── api/              # Route handlers
-│   │   └── utils/            # Helpers
-│   ├── requirements.txt
-│   └── tests/
-├── frontend/
-│   ├── src/
-│   ├── package.json
-│   └── vite.config.ts
-└── README.md
+Authorization: Bearer <token>
 ```
+
+Get a token by registering or logging in.
+
+## Running Tests
+
+```bash
+cd backend
+pytest tests/unit/ -v
+pytest tests/integration/ -v
+```
+
+## Architecture
+
+- **FastAPI backend** with SQLAlchemy ORM
+- **SQLite database** (configurable via `HEALTHOS_DATABASE_URL`)
+- **JWT authentication** with bcrypt password hashing
+- **Modular system** for extending functionality
+- **Timeline service** for unified health events
+
+## Environment Variables
+
+- `HEALTHOS_DATABASE_URL` - Database connection string (default: sqlite:///./data/database/healthos.db)
+- `HEALTHOS_SECRET_KEY` - JWT signing key (default: change-me, MUST change in production)
+- `HEALTHOS_ACCESS_TOKEN_EXPIRE_MINUTES` - Token expiration (default: 60)
+- `HEALTHOS_LOG_LEVEL` - Logging level (default: INFO)
+
+## Development
+
+The codebase follows these principles:
+
+- Type hints throughout
+- Dependency injection for auth
+- Session-based database access
+- Comprehensive test coverage
+- Clear separation of concerns (routes, services, models)
+
+## Security
+
+- Passwords hashed with bcrypt
+- JWT tokens for stateless authentication
+- User data isolation (enforced at query level)
+- Protected endpoints via dependency injection
 
 ## License
 
-Personal project. Not currently accepting contributions.
+MIT
