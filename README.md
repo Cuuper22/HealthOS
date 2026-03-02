@@ -1,148 +1,179 @@
+![License](https://img.shields.io/badge/license-MIT-blue)
+![Backend](https://img.shields.io/badge/backend-FastAPI-009688)
+![Frontend](https://img.shields.io/badge/frontend-React-61DAFB)
+![Database](https://img.shields.io/badge/database-SQLite-003B57)
+![Auth](https://img.shields.io/badge/auth-JWT%20%2B%20bcrypt-green)
+
+# HealthOS
+
+FastAPI + React health platform — medical records, lab results, medications on one timeline. Plugin architecture for extensibility.
+
 ## Why
 
 My health data lives in six different patient portals. Each one has its own login, its own format, its own idea of what "recent" means. None of them talk to each other.
 
 HealthOS puts medical records, lab results, and medications on one timeline. Same place, same format, one login.
 
-The part I actually care about architecturally: each health domain is a plugin. Labs, medications, medical records — they all implement the same `BaseModule` interface, register themselves at startup, and expose standard methods for timeline events, data import/export, and cross-module queries. The medications module can check if lab results exist before surfacing interaction warnings. Adding a new domain means implementing one abstract class, not rewiring the app.
+The part I actually care about architecturally: each health domain is a plugin. Labs, medications, medical records — they all implement the same `BaseModule` abstract class, register at startup via the module registry, and expose standard methods for timeline events, data import/export, and cross-module queries. The base class includes `query_related_module()` so any module can reach into any other through the registry — the plumbing for things like medications checking lab results before surfacing interaction warnings. Adding a new domain means implementing one abstract class, not rewiring the app.
 
-The auth layer does the small things that matter: rate-limited login, a password reset endpoint that always returns "email sent" whether the account exists or not (anti-enumeration), and an audit log that captures before/after values on every write.
+The auth layer does the small things that matter: rate-limited login (5/min via slowapi), a password reset endpoint that always returns "email sent" whether the account exists or not (anti-enumeration), and JWT tokens with bcrypt hashing.
 
 Your health data shouldn't require six browser tabs to understand.
 
-# HealthOS
+## Architecture
 
-A production-ready FastAPI + React health platform for tracking medical records, lab results, medications, and unified health timeline.
+```
+┌─────────────────────────────────────┐
+│          React Frontend              │
+│    Timeline · Records · Labs · Meds  │
+└───────────────┬─────────────────────┘
+                │ REST API
+                ▼
+┌─────────────────────────────────────┐
+│          FastAPI Gateway             │
+│  Auth (JWT) · CORS · Rate Limiting   │
+│         Pydantic Validation          │
+└───────────────┬─────────────────────┘
+                │
+       ┌────────┼────────┬────────┐
+       ▼        ▼        ▼        ▼
+┌──────────┐ ┌───────┐ ┌──────┐ ┌────────────┐
+│ Medical  │ │ Labs  │ │ Meds │ │ [Your      │
+│ Records  │ │       │ │      │ │  Module]   │
+│ Module   │ │Module │ │Module│ │            │
+└─────┬────┘ └───┬───┘ └──┬───┘ └─────┬──────┘
+      │          │        │            │
+      └──────────┼────────┼────────────┘
+                 │ BaseModule interface
+                 ▼
+┌─────────────────────────────────────┐
+│       Timeline Service               │
+│  Aggregates events from all modules  │
+└───────────────┬─────────────────────┘
+                │
+                ▼
+┌─────────────────────────────────────┐
+│      SQLite (SQLAlchemy ORM)         │
+└─────────────────────────────────────┘
+```
+
+## Plugin Architecture
+
+Each health domain implements `BaseModule`:
+
+```python
+class BaseModule(ABC):
+    # Identity
+    name: str                    # "medications"
+    display_name: str            # "Medications"
+    description: str             # Human-readable
+    version: str                 # Semver
+
+    # Data access
+    has_data(user_id) -> bool
+    get_data_summary(user_id) -> dict
+    get_last_update(user_id) -> datetime | None
+
+    # I/O
+    import_data(user_id, file_path, file_type) -> dict
+    export_data(user_id, format) -> bytes
+
+    # Timeline integration
+    get_timeline_events(user_id, start_date, end_date) -> list[dict]
+
+    # Cross-module queries
+    query_related_module(module_name, query) -> Any | None
+    execute_query(query) -> Any
+
+    # Optional
+    dependencies: list[str]      # Modules this one requires
+    enhances: list[str]          # Modules this one extends
+    get_insights(user_id) -> list[dict]
+    get_correlations(user_id, other_module) -> dict | None
+```
+
+Modules register via `ModuleRegistry` at startup. The registry syncs module metadata to the database and provides discovery (`is_module_available`, `get_module`, `list_modules`).
+
+The Timeline Service queries all registered modules for events within a date range and merges them chronologically.
+
+**Adding a new domain** (imaging, vitals, allergies):
+1. Create a class implementing `BaseModule`
+2. Register it — timeline and cross-module queries work automatically
+
+## Screenshots
+
+<!-- To be added -->
 
 ## Features
 
-- **Authentication**: JWT-based auth with bcrypt password hashing, rate limiting, and password reset
-- **Medical Records**: Track doctor visits, diagnoses, and notes
-- **Lab Results**: Record and view laboratory test results with reference ranges
-- **Medications**: Manage current and past medications with dosage validation
-- **Timeline**: Unified chronological view of all health events
-- **Security**: CORS protection, input validation, auth middleware
-- **Production Ready**: Error boundaries, loading states, pagination, consistent API errors
+- **3 health modules** — medical records, lab results, medications (extensible via BaseModule)
+- **Unified timeline** — chronological view aggregated from all modules
+- **JWT authentication** — bcrypt hashing, rate limiting (slowapi), anti-enumeration on password reset
+- **Module registry** — auto-discovery, DB-synced metadata, cross-module query infrastructure
+- **Data import** — file-based import endpoint for health data
+- **Docker deployment** — `docker-compose up` for the full stack
 
-## Quick Start with Docker
+## Quick Start
+
+### Docker (recommended)
 
 ```bash
 docker-compose up
+# Backend on :8000, frontend on :5173
 ```
 
-This will start both backend (port 8000) and frontend (port 5173).
+### Manual
 
-## Manual Setup
-
-### Backend Setup
-
-1. Navigate to backend directory:
 ```bash
+# Backend
 cd backend
-```
-
-2. Create a virtual environment (recommended):
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-3. Install dependencies:
-```bash
+python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-```
-
-4. Copy `.env.example` to `.env` and configure:
-```bash
-cp .env.example .env
-# Edit .env and change HEALTHOS_SECRET_KEY to a secure random value
-```
-
-5. Run the server:
-```bash
+cp .env.example .env  # Change HEALTHOS_SECRET_KEY
 uvicorn app.main:app --reload
-```
+# → http://localhost:8000 (docs at /docs)
 
-The API will be available at `http://localhost:8000`
-
-API docs: `http://localhost:8000/docs`
-
-### Frontend Setup
-
-1. Navigate to frontend directory:
-```bash
+# Frontend
 cd frontend
+npm install && npm run dev
+# → http://localhost:5173
 ```
 
-2. Install dependencies:
-```bash
-npm install
-```
-
-3. Start development server:
-```bash
-npm run dev
-```
-
-Frontend will be available at `http://localhost:5173`
-
-## Development Workflow
-
-### Create Test Data
-
-Run the seed script to create a test user and sample data:
+### Seed test data
 
 ```bash
-cd backend
-python seed_data.py
+cd backend && python seed_data.py
+# test@healthos.dev / password123
 ```
-
-Test credentials:
-- Email: `test@healthos.dev`
-- Password: `password123`
-
-### Database Setup
-
-See [DATABASE_SETUP.md](./DATABASE_SETUP.md) for detailed database configuration, migrations, and backup instructions.
 
 ## API Endpoints
 
-### Authentication
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - Login and get JWT token
+**Auth**
+- `POST /api/auth/register` — rate-limited 5/min
+- `POST /api/auth/login` — rate-limited 5/min
+- `POST /api/auth/password-reset-request` — rate-limited 3/hr, anti-enumeration
+- `POST /api/auth/password-reset`
 
-### Medical Records (Protected)
-- `GET /api/medical-records/` - List user's medical records
-- `POST /api/medical-records/` - Create medical record
+**Health Data** (all protected)
+- `GET/POST /api/medical-records/`
+- `GET/POST /api/labs/`
+- `GET/POST /api/medications/`
 
-### Lab Results (Protected)
-- `GET /api/labs/` - List user's lab results
-- `POST /api/labs/` - Create lab result
+**Platform**
+- `GET /api/timeline/` — unified chronological view
+- `GET /api/modules/` — list registered modules
+- `POST /api/imports/` — file-based data import
 
-### Medications (Protected)
-- `GET /api/medications/` - List user's medications
-- `POST /api/medications/` - Create medication
+## Environment Variables
 
-### Timeline (Protected)
-- `GET /api/timeline/` - Get unified health timeline
+| Variable | Default | Notes |
+|----------|---------|-------|
+| `HEALTHOS_SECRET_KEY` | `change-me` | **Must change in production** |
+| `HEALTHOS_DATABASE_URL` | `sqlite:///./data/database/healthos.db` | SQLAlchemy connection string |
+| `HEALTHOS_ACCESS_TOKEN_EXPIRE_MINUTES` | `60` | JWT token lifetime |
+| `HEALTHOS_LOG_LEVEL` | `INFO` | Python logging level |
 
-### Modules
-- `GET /api/modules/` - List available modules
-
-### Data Import (Protected)
-- `POST /api/imports/` - Import health data from file
-
-## Authentication
-
-Protected endpoints require a JWT token in the Authorization header:
-
-```
-Authorization: Bearer <token>
-```
-
-Get a token by registering or logging in.
-
-## Running Tests
+## Tests
 
 ```bash
 cd backend
@@ -150,37 +181,20 @@ pytest tests/unit/ -v
 pytest tests/integration/ -v
 ```
 
-## Architecture
+Unit tests (auth, health data) + integration tests (module system).
 
-- **FastAPI backend** with SQLAlchemy ORM
-- **SQLite database** (configurable via `HEALTHOS_DATABASE_URL`)
-- **JWT authentication** with bcrypt password hashing
-- **Modular system** for extending functionality
-- **Timeline service** for unified health events
+## Known Trade-offs
 
-## Environment Variables
+- **SQLite** — good enough for personal health tracking, not for multi-tenant SaaS
+- **No email sending** — password reset logs the token in dev mode, email TODO in production
+- **Cross-module queries exist in BaseModule but aren't used yet** — the `query_related_module()` infrastructure is built, individual modules haven't wired up cross-queries
+- **No CI/CD** — tests exist but no automated pipeline
+- **Import is basic** — file upload endpoint exists, format-specific parsers are minimal
 
-- `HEALTHOS_DATABASE_URL` - Database connection string (default: sqlite:///./data/database/healthos.db)
-- `HEALTHOS_SECRET_KEY` - JWT signing key (default: change-me, MUST change in production)
-- `HEALTHOS_ACCESS_TOKEN_EXPIRE_MINUTES` - Token expiration (default: 60)
-- `HEALTHOS_LOG_LEVEL` - Logging level (default: INFO)
+## See Also
 
-## Development
-
-The codebase follows these principles:
-
-- Type hints throughout
-- Dependency injection for auth
-- Session-based database access
-- Comprehensive test coverage
-- Clear separation of concerns (routes, services, models)
-
-## Security
-
-- Passwords hashed with bcrypt
-- JWT tokens for stateless authentication
-- User data isolation (enforced at query level)
-- Protected endpoints via dependency injection
+- [anti-slop-design](https://github.com/Cuuper22/anti-slop-design) — design skill that generated this project's UI patterns
+- [Erdos](https://github.com/Cuuper22/Erdos) — same engineering approach (modular architecture, real tests) applied to theorem proving
 
 ## License
 
