@@ -8,6 +8,8 @@
 
 FastAPI + React health platform for medical records, lab results, and medications on one timeline. The main idea is a plugin architecture for health domains.
 
+> **Status:** Prototype and architecture showcase. It uses seeded/test data paths and should not be treated as production medical software or medical advice.
+
 ## Why
 
 Health data often lives in six different patient portals. Each one has its own login, its own format, its own idea of what "recent" means. None of them talk to each other.
