@@ -6,19 +6,19 @@
 
 # HealthOS
 
-FastAPI + React health platform — medical records, lab results, medications on one timeline. Plugin architecture for extensibility.
+FastAPI + React health platform for medical records, lab results, and medications on one timeline. The main idea is a plugin architecture for health domains.
 
 ## Why
 
-My health data lives in six different patient portals. Each one has its own login, its own format, its own idea of what "recent" means. None of them talk to each other.
+Health data often lives in six different patient portals. Each one has its own login, its own format, its own idea of what "recent" means. None of them talk to each other.
 
 HealthOS puts medical records, lab results, and medications on one timeline. Same place, same format, one login.
 
-The part I actually care about architecturally: each health domain is a plugin. Labs, medications, medical records — they all implement the same `BaseModule` abstract class, register at startup via the module registry, and expose standard methods for timeline events, data import/export, and cross-module queries. The base class includes `query_related_module()` so any module can reach into any other through the registry — the plumbing for things like medications checking lab results before surfacing interaction warnings. Adding a new domain means implementing one abstract class, not rewiring the app.
+The part I actually care about architecturally: each health domain is a plugin. Labs, medications, medical records - they all implement the same `BaseModule` abstract class, register at startup via the module registry, and expose standard methods for timeline events, data import/export, and cross-module queries. The base class includes `query_related_module()` so any module can reach into any other through the registry - the plumbing for things like medications checking lab results before surfacing interaction warnings. Adding a new domain means implementing one abstract class, not rewiring the app.
 
 The auth layer does the small things that matter: rate-limited login (5/min via slowapi), a password reset endpoint that always returns "email sent" whether the account exists or not (anti-enumeration), and JWT tokens with bcrypt hashing.
 
-Your health data shouldn't require six browser tabs to understand.
+Health data should not require six browser tabs to understand.
 
 ## Architecture
 
@@ -98,7 +98,15 @@ The Timeline Service queries all registered modules for events within a date ran
 
 **Adding a new domain** (imaging, vitals, allergies):
 1. Create a class implementing `BaseModule`
-2. Register it — timeline and cross-module queries work automatically
+2. Register it - timeline and cross-module queries work automatically
+
+## What To Inspect
+
+- `backend/app/modules/base.py` for the plugin interface.
+- `backend/app/modules/registry.py` for module discovery and database sync.
+- `backend/app/services/timeline.py` for cross-module event aggregation.
+- `backend/app/api/routes/auth.py` and `backend/app/utils/security.py` for JWT, bcrypt, rate limiting, and anti-enumeration behavior.
+- `frontend/src/pages/Timeline.tsx` for the unified health view.
 
 ## Screenshots
 
@@ -106,12 +114,12 @@ The Timeline Service queries all registered modules for events within a date ran
 
 ## Features
 
-- **3 health modules** — medical records, lab results, medications (extensible via BaseModule)
-- **Unified timeline** — chronological view aggregated from all modules
-- **JWT authentication** — bcrypt hashing, rate limiting (slowapi), anti-enumeration on password reset
-- **Module registry** — auto-discovery, DB-synced metadata, cross-module query infrastructure
-- **Data import** — file-based import endpoint for health data
-- **Docker deployment** — `docker-compose up` for the full stack
+- **3 health modules** - medical records, lab results, medications (extensible via BaseModule)
+- **Unified timeline** - chronological view aggregated from all modules
+- **JWT authentication** - bcrypt hashing, rate limiting (slowapi), anti-enumeration on password reset
+- **Module registry** - auto-discovery, DB-synced metadata, cross-module query infrastructure
+- **Data import** - file-based import endpoint for health data
+- **Docker deployment** - `docker-compose up` for the full stack
 
 ## Quick Start
 
@@ -149,9 +157,9 @@ cd backend && python seed_data.py
 ## API Endpoints
 
 **Auth**
-- `POST /api/auth/register` — rate-limited 5/min
-- `POST /api/auth/login` — rate-limited 5/min
-- `POST /api/auth/password-reset-request` — rate-limited 3/hr, anti-enumeration
+- `POST /api/auth/register` - rate-limited 5/min
+- `POST /api/auth/login` - rate-limited 5/min
+- `POST /api/auth/password-reset-request` - rate-limited 3/hr, anti-enumeration
 - `POST /api/auth/password-reset`
 
 **Health Data** (all protected)
@@ -160,9 +168,9 @@ cd backend && python seed_data.py
 - `GET/POST /api/medications/`
 
 **Platform**
-- `GET /api/timeline/` — unified chronological view
-- `GET /api/modules/` — list registered modules
-- `POST /api/imports/` — file-based data import
+- `GET /api/timeline/` - unified chronological view
+- `GET /api/modules/` - list registered modules
+- `POST /api/imports/` - file-based data import
 
 ## Environment Variables
 
@@ -185,16 +193,16 @@ Unit tests (auth, health data) + integration tests (module system).
 
 ## Known Trade-offs
 
-- **SQLite** — good enough for personal health tracking, not for multi-tenant SaaS
-- **No email sending** — password reset logs the token in dev mode, email TODO in production
-- **Cross-module queries exist in BaseModule but aren't used yet** — the `query_related_module()` infrastructure is built, individual modules haven't wired up cross-queries
-- **No CI/CD** — tests exist but no automated pipeline
-- **Import is basic** — file upload endpoint exists, format-specific parsers are minimal
+- **SQLite** - good enough for personal health tracking, not for multi-tenant SaaS
+- **No email sending** - password reset logs the token in dev mode, email TODO in production
+- **Cross-module queries exist in BaseModule but aren't used yet** - the `query_related_module()` infrastructure is built, individual modules haven't wired up cross-queries
+- **No CI/CD** - tests exist but no automated pipeline
+- **Import is basic** - file upload endpoint exists, format-specific parsers are minimal
 
 ## See Also
 
-- [anti-slop-design](https://github.com/Cuuper22/anti-slop-design) — design skill that generated this project's UI patterns
-- [Erdos](https://github.com/Cuuper22/Erdos) — same engineering approach (modular architecture, real tests) applied to theorem proving
+- [anti-slop-design](https://github.com/Cuuper22/anti-slop-design) - design skill that generated this project's UI patterns
+- [Erdos](https://github.com/Cuuper22/Erdos) - same engineering approach (modular architecture, real tests) applied to theorem proving
 
 ## License
 
